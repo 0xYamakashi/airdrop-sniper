@@ -29,8 +29,6 @@ export const muteTrade = async (
     wallet
   );
 
-  console.log(await fromTokenContract.decimals());
-
   const allowance = await fromTokenContract.allowance(
     wallet.address,
     network.muteRouter

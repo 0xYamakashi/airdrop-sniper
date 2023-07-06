@@ -20,7 +20,7 @@ export const network = {
 
 const main = async (): Promise<void> => {
   const inToken = tokens.find((token) => token.symbol === "USDC");
-  const outToken = tokens.find((token) => token.symbol === "USDT");
+  const outToken = tokens.find((token) => token.symbol === "USD+");
 
   if (!inToken || !outToken) {
     throw new Error("Token not found");
@@ -28,7 +28,7 @@ const main = async (): Promise<void> => {
   for (const privateKey of privateKeys) {
     try {
       // on mute u only have USDC/USD+ pool
-      // await muteTrade(privateKey, 0.4, inToken, outToken);
+      await muteTrade(privateKey, 0.4, inToken, outToken);
       await syncswapTrade(privateKey, 0.4, inToken, outToken);
     } catch (e) {
       console.error("Error", e);

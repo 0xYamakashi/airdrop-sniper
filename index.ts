@@ -30,6 +30,8 @@ const trade = async (
 
   const wallet: ethers.Wallet = new ethers.Wallet(privateKey, provider);
 
+  console.log(`STARTING TRADE FOR ADDRESS: ${wallet.address}`);
+
   const syncswapRouter: ethers.Contract = new ethers.Contract(
     network.syncswapRouter,
     RouterContractABI,
@@ -110,14 +112,18 @@ const trade = async (
 };
 
 const main = async (): Promise<void> => {
-  const inToken = tokens.find((token) => token.symbol === "USDC");
+  const inToken = tokens.find((token) => token.symbol === "BUSD");
   const outToken = tokens.find((token) => token.symbol === "USDT");
 
   if (!inToken || !outToken) {
     throw new Error("Token not found");
   }
   for (const privateKey of privateKeys) {
-    await trade(privateKey, 1, inToken, outToken);
+    try {
+      await trade(privateKey, 0.4, inToken, outToken);
+    } catch (e) {
+      console.error("Error", e);
+    }
   }
 };
 

@@ -40,4 +40,12 @@ export const tokens: Token[] = [
     kind: "ERC20",
     is_nft: false,
   },
+  {
+    id: 4,
+    address: "0x8E86e46278518EFc1C5CEd245cBA2C7e3ef11557",
+    symbol: "USD+",
+    decimals: 6,
+    kind: "ERC20",
+    is_nft: false,
+  },
 ];

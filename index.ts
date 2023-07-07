@@ -1,8 +1,8 @@
 import { config } from "dotenv";
 import { tokens } from "./data/tokens";
-import { syncswapTrade } from "./utils/syncswapTrade";
+import { PoolType, syncswapTrade } from "./utils/syncswapTrade";
 import { muteTrade } from "./utils/muteTrade";
-
+import { ethers } from "ethers";
 
 config();
 
@@ -16,11 +16,13 @@ export const network = {
   syncswapStablePoolFactory: "0x5b9f21d407F35b10CbfDDca17D5D84b129356ea3",
   syncswapClassicPoolFactory: "0xf2DAd89f2788a8CD54625C60b55cD3d2D0ACa7Cb",
   muteRouter: "0x8B791913eB07C32779a16750e3868aA8495F5964",
+  ethAddress: ethers.constants.AddressZero,
+  wethAddress: "0x5aea5775959fbc2557cc8789bc1bf90a239d9a91",
 };
 
 const main = async (): Promise<void> => {
   const inToken = tokens.find((token) => token.symbol === "USDC");
-  const outToken = tokens.find((token) => token.symbol === "USD+");
+  const outToken = tokens.find((token) => token.symbol === "ETH");
 
   if (!inToken || !outToken) {
     throw new Error("Token not found");
@@ -28,8 +30,8 @@ const main = async (): Promise<void> => {
   for (const privateKey of privateKeys) {
     try {
       // on mute u only have USDC/USD+ pool
-      await muteTrade(privateKey, 0.4, inToken, outToken);
-      await syncswapTrade(privateKey, 0.4, inToken, outToken);
+      // await muteTrade(privateKey, 0.4, inToken, outToken);
+      await syncswapTrade(privateKey, 100, inToken, outToken, PoolType.Classic);
     } catch (e) {
       console.error("Error", e);
     }

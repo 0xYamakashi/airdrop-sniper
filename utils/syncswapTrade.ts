@@ -6,11 +6,17 @@ import RouterContractABI from "../abis/syncswap/ROUTER_ABI.json";
 import Erc20Abi from "../abis/ERC20_ABI.json";
 import StablePoolFactoryAbi from "../abis/syncswap/STABLE_POOL_FACTORY_ABI.json";
 
+export enum PoolType {
+  Stable = 0,
+  Classic = 1,
+}
+
 export const syncswapTrade = async (
   privateKey: string,
-  amountInUsd: number,
+  percentageOfWalletBallance: number,
   inToken: Token,
-  outToken: Token
+  outToken: Token,
+  poolType: PoolType
 ): Promise<void> => {
   const provider: ethers.providers.JsonRpcProvider =
     new ethers.providers.JsonRpcProvider(network.url);
@@ -19,6 +25,10 @@ export const syncswapTrade = async (
 
   console.log(`STARTING TRADE FOR ADDRESS: ${wallet.address}`);
 
+  const isNativeTokenIn = inToken.symbol === "ETH";
+  const isNativeTokenOut = outToken.symbol === "ETH";
+
+
   const syncswapRouter: ethers.Contract = new ethers.Contract(
     network.syncswapRouter,
     RouterContractABI,
@@ -26,32 +36,36 @@ export const syncswapTrade = async (
   );
 
   const fromTokenContract: ethers.Contract = new ethers.Contract(
-    inToken.address,
+    isNativeTokenIn ? network.wethAddress : inToken.address,
     Erc20Abi,
     wallet
   );
 
-  const stablePoolFactoryContract: ethers.Contract = new ethers.Contract(
-    network.syncswapStablePoolFactory,
+  const balance = isNativeTokenIn
+    ? await provider.getBalance(wallet.address)
+    : await fromTokenContract.balanceOf(wallet.address);
+
+  const inAmount = balance.mul(percentageOfWalletBallance).div(100);
+
+  const poolFactoryContract: ethers.Contract = new ethers.Contract(
+    poolType
+      ? network.syncswapClassicPoolFactory
+      : network.syncswapStablePoolFactory,
     StablePoolFactoryAbi,
     provider
   );
 
-  const lpTokenAddress = await stablePoolFactoryContract.getPool(
-    inToken.address,
-    outToken.address
+  const lpTokenAddress = await poolFactoryContract.getPool(
+    isNativeTokenIn ? network.wethAddress : inToken.address,
+    isNativeTokenOut ? network.wethAddress : outToken.address
   );
 
   const allowance = await fromTokenContract.allowance(
     wallet.address,
     network.syncswapRouter
   );
-  const bigNumberAmount = ethers.utils.parseUnits(
-    amountInUsd.toString(),
-    inToken.decimals
-  );
 
-  if (allowance.lt(bigNumberAmount)) {
+  if (allowance.lt(inAmount) && !isNativeTokenIn) {
     const approveTx = await fromTokenContract.approve(
       network.syncswapRouter,
       ethers.constants.MaxUint256
@@ -67,7 +81,11 @@ export const syncswapTrade = async (
 
   const swapData: string = defaultAbiCoder.encode(
     ["address", "address", "uint8"],
-    [inToken.address, wallet.address, withdrawMode] // tokenIn, to, withdraw mode
+    [
+      isNativeTokenIn ? network.wethAddress : inToken.address,
+      wallet.address,
+      withdrawMode,
+    ] // tokenIn, to, withdraw mode
   );
 
   // We have only 1 step.
@@ -85,14 +103,17 @@ export const syncswapTrade = async (
     {
       steps: steps,
       tokenIn: inToken.address,
-      amountIn: bigNumberAmount,
+      amountIn: inAmount,
     },
   ];
 
   const swapTx = await syncswapRouter.swap(
     paths,
-    ethers.utils.parseUnits((amountInUsd * 0.99).toString(), outToken.decimals),
-    BigNumber.from(Math.floor(Date.now() / 1000)).add(1800)
+    0,
+    BigNumber.from(Math.floor(Date.now() / 1000)).add(1800),
+    {
+      value: isNativeTokenIn ? inAmount : 0,
+    }
   );
 
   console.log(`Tokens swaped in tx: ${swapTx.hash} for ${wallet.address}`);

@@ -1,3 +1,5 @@
+import { ethers } from "ethers";
+
 export type Token = {
   id: number;
   address: string;
@@ -10,10 +12,10 @@ export type Token = {
 export const tokens: Token[] = [
   {
     id: 0,
-    address: "0x0000000000000000000000000000000000000000",
+    address: ethers.constants.AddressZero,
     symbol: "ETH",
     decimals: 18,
-    kind: "ERC20",
+    kind: "NATIVE",
     is_nft: false,
   },
   {
@@ -45,6 +47,14 @@ export const tokens: Token[] = [
     address: "0x8E86e46278518EFc1C5CEd245cBA2C7e3ef11557",
     symbol: "USD+",
     decimals: 6,
+    kind: "ERC20",
+    is_nft: false,
+  },
+  {
+    id: 5,
+    address: "0x5aea5775959fbc2557cc8789bc1bf90a239d9a91",
+    symbol: "WETH",
+    decimals: 18,
     kind: "ERC20",
     is_nft: false,
   },

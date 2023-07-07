@@ -6,10 +6,17 @@ import Erc20Abi from "../abis/ERC20_ABI.json";
 
 export const muteTrade = async (
   privateKey: string,
-  amountInUsd: number,
+  percentageOfWalletBalance: number,
   inToken: Token,
   outToken: Token
 ): Promise<void> => {
+  if (
+    (inToken.symbol !== "USDC" && inToken.symbol !== "USD+") ||
+    (outToken.symbol !== "USDC" && outToken.symbol !== "USD+")
+  ) {
+    throw new Error("On mute trade for now only USDC and USD+ pool is supported");
+  }
+
   const provider: ethers.providers.JsonRpcProvider =
     new ethers.providers.JsonRpcProvider(network.url);
 
@@ -33,12 +40,12 @@ export const muteTrade = async (
     wallet.address,
     network.muteRouter
   );
-  const bigNumberAmount = ethers.utils.parseUnits(
-    amountInUsd.toString(),
-    inToken.decimals
-  );
 
-  if (allowance.lt(bigNumberAmount)) {
+  const balance = await fromTokenContract.balanceOf(wallet.address);
+
+  const inAmount = balance.mul(percentageOfWalletBalance).div(100);
+
+  if (allowance.lt(inAmount)) {
     const approveTx = await fromTokenContract.approve(
       network.muteRouter,
       ethers.constants.MaxUint256
@@ -53,8 +60,8 @@ export const muteTrade = async (
   const path = [inToken.address, outToken.address];
 
   const swapTx = await muteRouter.swapExactTokensForTokens(
-    bigNumberAmount,
-    ethers.utils.parseUnits((amountInUsd * 0.99).toString(), outToken.decimals),
+    balance,
+    inAmount.mul(99).div(100),
     path,
     wallet.address,
     BigNumber.from(Math.floor(Date.now() / 1000)).add(1800),

@@ -1,10 +1,11 @@
-import { ethers, BigNumber } from "ethers";
+import { ethers, BigNumber, Contract } from "ethers";
 import { defaultAbiCoder } from "ethers/lib/utils";
 import { network } from "..";
 import { Token } from "../data/tokens";
-import RouterContractABI from "../abis/syncswap/ROUTER_ABI.json";
+import RouterContractAbi from "../abis/syncswap/ROUTER_ABI.json";
 import Erc20Abi from "../abis/ERC20_ABI.json";
 import StablePoolFactoryAbi from "../abis/syncswap/STABLE_POOL_FACTORY_ABI.json";
+import PoolAbi from "../abis/syncswap/POOL_ABI.json";
 
 export enum PoolType {
   Stable = 0,
@@ -28,10 +29,9 @@ export const syncswapTrade = async (
   const isNativeTokenIn = inToken.symbol === "ETH";
   const isNativeTokenOut = outToken.symbol === "ETH";
 
-
   const syncswapRouter: ethers.Contract = new ethers.Contract(
     network.syncswapRouter,
-    RouterContractABI,
+    RouterContractAbi,
     wallet
   );
 
@@ -60,6 +60,22 @@ export const syncswapTrade = async (
     isNativeTokenOut ? network.wethAddress : outToken.address
   );
 
+  const pool: Contract = new Contract(lpTokenAddress, PoolAbi, provider);
+  const reserves: [BigNumber, BigNumber] = await pool.getReserves();
+  const [reserveInToken, reserveOutToken] =
+    (isNativeTokenIn ? network.wethAddress : inToken.address) <
+    (isNativeTokenOut ? network.wethAddress : outToken.address)
+      ? reserves
+      : [reserves[1], reserves[0]];
+
+  const slippageRate = 99;
+
+  const amountOutMin = reserveOutToken
+    .mul(inAmount)
+    .div(reserveInToken)
+    .mul(slippageRate)
+    .div(100);
+
   const allowance = await fromTokenContract.allowance(
     wallet.address,
     network.syncswapRouter
@@ -77,7 +93,11 @@ export const syncswapTrade = async (
     );
   }
 
-  const withdrawMode = 1; // 1 or 2 to withdraw to user's wallet
+  // Determine withdraw mode, to withdraw native ETH or wETH on last step.
+  // 0 - vault internal transfer
+  // 1 - withdraw and unwrap to naitve ETH
+  // 2 - withdraw and wrap to wETH
+  const withdrawMode = 1;
 
   const swapData: string = defaultAbiCoder.encode(
     ["address", "address", "uint8"],
@@ -109,7 +129,7 @@ export const syncswapTrade = async (
 
   const swapTx = await syncswapRouter.swap(
     paths,
-    0,
+    amountOutMin,
     BigNumber.from(Math.floor(Date.now() / 1000)).add(1800),
     {
       value: isNativeTokenIn ? inAmount : 0,

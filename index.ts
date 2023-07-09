@@ -3,6 +3,7 @@ import { tokens } from "./data/tokens";
 import { PoolType, syncswapTrade } from "./utils/syncswapTrade";
 import { muteTrade } from "./utils/muteTrade";
 import { ethers } from "ethers";
+import { getTokenBalance } from "./utils/getTokenBalance";
 
 config();
 
@@ -29,9 +30,10 @@ const main = async (): Promise<void> => {
   }
   for (const privateKey of privateKeys) {
     try {
+      await getTokenBalance(privateKey, inToken);
       // on mute u only have USDC/USD+ pool working for now
       // await muteTrade(privateKey, 100, inToken, outToken);
-      await syncswapTrade(privateKey, 100, inToken, outToken, PoolType.Classic);
+      // await syncswapTrade(privateKey, 80, inToken, outToken, PoolType.Classic);
     } catch (e) {
       console.error("Error", e);
     }

@@ -1,5 +1,4 @@
-import { ethers, BigNumber, Contract } from "ethers";
-import { defaultAbiCoder } from "ethers/lib/utils";
+import { ethers, Contract, AbiCoder } from "ethers";
 import { network } from "../..";
 import { Token } from "../../data/tokens";
 import RouterContractAbi from "../../abis/syncswap/ROUTER_ABI.json";
@@ -19,8 +18,9 @@ export const syncswapTrade = async (
   outToken: Token,
   poolType: PoolType
 ): Promise<void> => {
-  const provider: ethers.providers.JsonRpcProvider =
-    new ethers.providers.JsonRpcProvider(network.url);
+  const provider: ethers.JsonRpcProvider = new ethers.JsonRpcProvider(
+    network.url
+  );
 
   const wallet: ethers.Wallet = new ethers.Wallet(privateKey, provider);
 
@@ -61,7 +61,7 @@ export const syncswapTrade = async (
   );
 
   const pool: Contract = new Contract(lpTokenAddress, PoolAbi, provider);
-  const reserves: [BigNumber, BigNumber] = await pool.getReserves();
+  const reserves: [bigint, bigint] = await pool.getReserves();
   const [reserveInToken, reserveOutToken] =
     (isNativeTokenIn ? network.wethAddress : inToken.address) <
     (isNativeTokenOut ? network.wethAddress : outToken.address)
@@ -70,11 +70,10 @@ export const syncswapTrade = async (
 
   const slippageRate = 99;
 
-  const amountOutMin = reserveOutToken
-    .mul(inAmount)
-    .div(reserveInToken)
-    .mul(slippageRate)
-    .div(100);
+  const amountOutMin =
+    (((reserveOutToken * BigInt(inAmount)) / BigInt(reserveInToken)) *
+      BigInt(slippageRate)) /
+    BigInt(100);
 
   const allowance = await fromTokenContract.allowance(
     wallet.address,
@@ -84,7 +83,7 @@ export const syncswapTrade = async (
   if (allowance.lt(inAmount) && !isNativeTokenIn) {
     const approveTx = await fromTokenContract.approve(
       network.syncswapRouter,
-      ethers.constants.MaxUint256
+      ethers.MaxUint256
     );
 
     await approveTx.wait();
@@ -99,7 +98,7 @@ export const syncswapTrade = async (
   // 2 - withdraw and wrap to wETH
   const withdrawMode = 1;
 
-  const swapData: string = defaultAbiCoder.encode(
+  const swapData: string = new AbiCoder().encode(
     ["address", "address", "uint8"],
     [
       isNativeTokenIn ? network.wethAddress : inToken.address,
@@ -113,7 +112,7 @@ export const syncswapTrade = async (
     {
       pool: lpTokenAddress,
       data: swapData,
-      callback: ethers.constants.AddressZero, // we don't have a callback
+      callback: ethers.ZeroAddress, // we don't have a callback
       callbackData: "0x",
     },
   ];
@@ -130,7 +129,7 @@ export const syncswapTrade = async (
   const swapTx = await syncswapRouter.swap(
     paths,
     amountOutMin,
-    BigNumber.from(Math.floor(Date.now() / 1000)).add(1800),
+    BigInt(Math.floor(Date.now() / 1000)) + BigInt(1800),
     {
       value: isNativeTokenIn ? inAmount : 0,
     }

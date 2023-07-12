@@ -1,4 +1,4 @@
-import { ethers, BigNumber } from "ethers";
+import { ethers } from "ethers";
 import { network } from "../..";
 import { Token } from "../../data/tokens";
 import RouterContractABI from "../../abis/mute/ROUTER_ABI.json";
@@ -19,8 +19,9 @@ export const muteTrade = async (
     );
   }
 
-  const provider: ethers.providers.JsonRpcProvider =
-    new ethers.providers.JsonRpcProvider(network.url);
+  const provider: ethers.JsonRpcProvider = new ethers.JsonRpcProvider(
+    network.url
+  );
 
   const wallet: ethers.Wallet = new ethers.Wallet(privateKey, provider);
 
@@ -50,7 +51,7 @@ export const muteTrade = async (
   if (allowance.lt(inAmount)) {
     const approveTx = await fromTokenContract.approve(
       network.muteRouter,
-      ethers.constants.MaxUint256
+      ethers.MaxUint256
     );
 
     await approveTx.wait();
@@ -66,7 +67,7 @@ export const muteTrade = async (
     inAmount.mul(99).div(100),
     path,
     wallet.address,
-    BigNumber.from(Math.floor(Date.now() / 1000)).add(1800),
+    BigInt(Math.floor(Date.now() / 1000)) + BigInt(1800),
     [true, true]
   );
   console.log(`Tokens swaped in tx: ${swapTx.hash} for ${wallet.address}`);

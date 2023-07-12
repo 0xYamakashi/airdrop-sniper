@@ -136,5 +136,5 @@ export const syncswapTrade = async (
     }
   );
 
-  console.log(`Tokens swaped in tx: ${swapTx.hash} for ${wallet.address}`);
+  console.log(`Tokens swaped in tx: ${swapTx.hash}`);
 };

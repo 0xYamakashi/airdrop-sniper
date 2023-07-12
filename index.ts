@@ -1,9 +1,9 @@
 import { config } from "dotenv";
-import { tokens } from "./data/tokens";
-import { PoolType, syncswapTrade } from "./services/syncSwap/trade";
+import { syncswapTrade } from "./services/syncSwap/trade";
 import { muteTrade } from "./services/mute/trade";
 import { ethers } from "ethers";
 import { getTokenBalance } from "./utils/getTokenBalance";
+import { findToken } from "./utils/findToken";
 
 config();
 
@@ -58,8 +58,8 @@ const main = async (): Promise<void> => {
     if (!v) throw new Error(`Missing argument`);
   });
 
-  const inToken = tokens.find((token) => token.symbol === inTokenSymbol);
-  const outToken = tokens.find((token) => token.symbol === outTokenSymbol);
+  const inToken = findToken(inTokenSymbol);
+  const outToken = findToken(inTokenSymbol);
 
   if (!inToken) {
     throw new Error("inToken not found");

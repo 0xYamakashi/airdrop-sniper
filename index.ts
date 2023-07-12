@@ -9,6 +9,14 @@ config();
 
 const privateKeys = (process.env.PRIVATE_KEYS || "").split(",");
 
+type Arguments = {
+  protocol: string;
+  inTokenSymbol: string;
+  outTokenSymbol: string;
+  percentageOfBalanceForSwap: string;
+  poolType: string;
+};
+
 export const network = {
   name: "zkSync Era Mainnet",
   chainId: 324,
@@ -26,17 +34,38 @@ const MAX_DELAY = 1000000;
 
 const main = async (): Promise<void> => {
   const args = process.argv.slice(2);
-  const command = args[0];
-  const inTokenSymbol = args[1];
-  const outTokenSymbol = args[2];
-  const percentageOfBalanceForSwap = parseInt(args[3]);
-  const poolType = parseInt(args[4]); // 0 for stable, 1 for others
+
+  const {
+    protocol,
+    inTokenSymbol,
+    outTokenSymbol,
+    percentageOfBalanceForSwap,
+    poolType,
+  }: Arguments = args.reduce((obj, arg) => {
+    let [key, value] = arg.split("=");
+    key = key.replace("--", "");
+    obj[key as keyof Arguments] = value;
+    return obj;
+  }, {} as Arguments);
+
+  Object.values({
+    protocol,
+    inTokenSymbol,
+    outTokenSymbol,
+    percentageOfBalanceForSwap,
+    poolType,
+  }).forEach((v) => {
+    if (!v) throw new Error(`Missing argument`);
+  });
 
   const inToken = tokens.find((token) => token.symbol === inTokenSymbol);
   const outToken = tokens.find((token) => token.symbol === outTokenSymbol);
 
   if (!inToken) {
-    throw new Error("Token not found");
+    throw new Error("inToken not found");
+  }
+  if (!outToken) {
+    throw new Error("outToken not found");
   }
 
   for (const [index, privateKey] of privateKeys.entries()) {
@@ -44,30 +73,37 @@ const main = async (): Promise<void> => {
       const delay = Math.random() * (MAX_DELAY - MIN_DELAY) + MIN_DELAY;
       const isLastKey = index === privateKeys.length - 1;
 
-      if (command === "balances") {
-        await getTokenBalance(privateKey, inToken);
-      } else if (command === "mute" && outToken) {
-        await muteTrade(
-          privateKey,
-          percentageOfBalanceForSwap,
-          inToken,
-          outToken
-        );
-        if (!isLastKey) {
-          console.log("Delay before next trade: ", delay);
-          await new Promise((resolve) => setTimeout(resolve, delay));
+      switch (protocol) {
+        case "balances": {
+          await getTokenBalance(privateKey, inToken);
+          break;
         }
-      } else if (command === "syncswap" && outToken) {
-        await syncswapTrade(
-          privateKey,
-          percentageOfBalanceForSwap,
-          inToken,
-          outToken,
-          poolType
-        );
-        if (!isLastKey) {
-          console.log("Delay before next trade: ", delay);
-          await new Promise((resolve) => setTimeout(resolve, delay));
+        case "mute": {
+          await muteTrade(
+            privateKey,
+            Number(percentageOfBalanceForSwap),
+            inToken,
+            outToken
+          );
+          if (!isLastKey) {
+            console.log("Delay before next trade: ", delay);
+            await new Promise((resolve) => setTimeout(resolve, delay));
+          }
+          break;
+        }
+        case "syncswap": {
+          await syncswapTrade(
+            privateKey,
+            Number(percentageOfBalanceForSwap),
+            inToken,
+            outToken,
+            Number(poolType)
+          );
+          if (!isLastKey) {
+            console.log("Delay before next trade: ", delay);
+            await new Promise((resolve) => setTimeout(resolve, delay));
+          }
+          break;
         }
       }
     } catch (e) {

@@ -59,7 +59,7 @@ const main = async (): Promise<void> => {
   });
 
   const inToken = findToken(inTokenSymbol);
-  const outToken = findToken(inTokenSymbol);
+  const outToken = findToken(outTokenSymbol);
 
   if (!inToken) {
     throw new Error("inToken not found");

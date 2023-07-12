@@ -7,8 +7,9 @@ export const getTokenBalance = async (
   privateKey: string,
   inToken: Token
 ): Promise<void> => {
-  const provider: ethers.providers.JsonRpcProvider =
-    new ethers.providers.JsonRpcProvider(network.url);
+  const provider: ethers.JsonRpcProvider = new ethers.JsonRpcProvider(
+    network.url
+  );
 
   const wallet: ethers.Wallet = new ethers.Wallet(privateKey, provider);
   const isNativeTokenIn = inToken.symbol === "ETH";
@@ -24,8 +25,9 @@ export const getTokenBalance = async (
     : await fromTokenContract.balanceOf(wallet.address);
 
   console.log(
-    `${inToken.symbol} Balance for ${
-      wallet.address
-    }: ${ethers.utils.formatUnits(balance, inToken.decimals)}`
+    `${inToken.symbol} Balance for ${wallet.address}: ${ethers.formatUnits(
+      balance,
+      inToken.decimals
+    )}`
   );
 };

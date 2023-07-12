@@ -1,8 +1,8 @@
 import { ethers } from "ethers";
-import { network } from "../..";
-import { Token } from "../../data/tokens";
-import RouterContractABI from "../../abis/mute/ROUTER_ABI.json";
-import Erc20Abi from "../../abis/ERC20_ABI.json";
+import { Token } from "../../../constants/tokens";
+import RouterContractABI from "../../../abis/mute/ROUTER_ABI.json";
+import Erc20Abi from "../../../abis/ERC20_ABI.json";
+import { networks } from "../../../constants/networks";
 
 export const muteTrade = async (
   privateKey: string,
@@ -10,6 +10,8 @@ export const muteTrade = async (
   inToken: Token,
   outToken: Token
 ): Promise<void> => {
+  const { url, muteRouterAddress } = networks["zkSync Era Mainnet"];
+
   if (
     (inToken.symbol !== "USDC" && inToken.symbol !== "USD+") ||
     (outToken.symbol !== "USDC" && outToken.symbol !== "USD+")
@@ -19,16 +21,14 @@ export const muteTrade = async (
     );
   }
 
-  const provider: ethers.JsonRpcProvider = new ethers.JsonRpcProvider(
-    network.url
-  );
+  const provider: ethers.JsonRpcProvider = new ethers.JsonRpcProvider(url);
 
   const wallet: ethers.Wallet = new ethers.Wallet(privateKey, provider);
 
   console.log(`STARTING TRADE FOR ADDRESS: ${wallet.address}`);
 
   const muteRouter: ethers.Contract = new ethers.Contract(
-    network.muteRouter,
+    muteRouterAddress,
     RouterContractABI,
     wallet
   );
@@ -41,7 +41,7 @@ export const muteTrade = async (
 
   const allowance = await fromTokenContract.allowance(
     wallet.address,
-    network.muteRouter
+    muteRouter
   );
 
   const balance = await fromTokenContract.balanceOf(wallet.address);
@@ -50,7 +50,7 @@ export const muteTrade = async (
 
   if (allowance.lt(inAmount)) {
     const approveTx = await fromTokenContract.approve(
-      network.muteRouter,
+      muteRouter,
       ethers.MaxUint256
     );
 

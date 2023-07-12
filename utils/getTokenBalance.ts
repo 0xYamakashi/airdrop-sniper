@@ -1,14 +1,14 @@
 import { ethers } from "ethers";
-import { network } from "..";
 import Erc20Abi from "../abis/ERC20_ABI.json";
-import { Token } from "../data/tokens";
+import { Token } from "../constants/tokens";
 
 export const getTokenBalance = async (
   privateKey: string,
-  inToken: Token
+  inToken: Token,
+  networks: any
 ): Promise<void> => {
   const provider: ethers.JsonRpcProvider = new ethers.JsonRpcProvider(
-    network.url
+    networks.url
   );
 
   const wallet: ethers.Wallet = new ethers.Wallet(privateKey, provider);

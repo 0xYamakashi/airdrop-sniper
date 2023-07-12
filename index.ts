@@ -1,7 +1,7 @@
 import { config } from "dotenv";
 import { tokens } from "./data/tokens";
-import { PoolType, syncswapTrade } from "./utils/syncswapTrade";
-import { muteTrade } from "./utils/muteTrade";
+import { PoolType, syncswapTrade } from "./services/syncSwap/trade";
+import { muteTrade } from "./services/mute/trade";
 import { ethers } from "ethers";
 import { getTokenBalance } from "./utils/getTokenBalance";
 

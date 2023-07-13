@@ -1,5 +1,5 @@
-import { findToken } from "../../../utils/findToken";
-import { getTokenBalance } from "../../../utils/getTokenBalance";
+import { findToken } from "../../utils/findToken";
+import { getTokenBalance } from "../../utils/getTokenBalance";
 
 const privateKeys = (process.env.PRIVATE_KEYS || "").split(",");
 

@@ -1,7 +1,7 @@
 import { findToken } from "../../utils/findToken";
 import { getTokenBalance } from "../../utils/getTokenBalance";
 import { program } from "commander";
-import { getTokenBalances } from "./getTokenBalance/getTokenBalances";
+import { getTokenBalances } from "./balances";
 
 async function main(): Promise<void> {
   program

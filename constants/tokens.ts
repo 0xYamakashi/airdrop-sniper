@@ -12,7 +12,7 @@ export type Token = {
 export const tokens: Token[] = [
   {
     id: 0,
-    address: ethers.constants.AddressZero,
+    address: ethers.ZeroAddress,
     symbol: "ETH",
     decimals: 18,
     kind: "NATIVE",

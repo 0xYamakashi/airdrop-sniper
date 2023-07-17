@@ -1,11 +1,10 @@
-import { ethers, BigNumber, Contract } from "ethers";
-import { defaultAbiCoder } from "ethers/lib/utils";
-import { network } from "..";
-import { Token } from "../data/tokens";
-import RouterContractAbi from "../abis/syncswap/ROUTER_ABI.json";
-import Erc20Abi from "../abis/ERC20_ABI.json";
-import StablePoolFactoryAbi from "../abis/syncswap/STABLE_POOL_FACTORY_ABI.json";
-import PoolAbi from "../abis/syncswap/POOL_ABI.json";
+import { ethers, Contract, AbiCoder } from "ethers";
+import { Token } from "../../../constants/tokens";
+import RouterContractAbi from "../../../abis/syncswap/ROUTER_ABI.json";
+import Erc20Abi from "../../../abis/ERC20_ABI.json";
+import StablePoolFactoryAbi from "../../../abis/syncswap/STABLE_POOL_FACTORY_ABI.json";
+import PoolAbi from "../../../abis/syncswap/POOL_ABI.json";
+import { networks } from "../../../constants/networks";
 
 export enum PoolType {
   Stable = 0,
@@ -19,8 +18,15 @@ export const syncswapTrade = async (
   outToken: Token,
   poolType: PoolType
 ): Promise<void> => {
-  const provider: ethers.providers.JsonRpcProvider =
-    new ethers.providers.JsonRpcProvider(network.url);
+  const {
+    url,
+    syncswapRouter,
+    wethAddress,
+    syncswapClassicPoolFactory,
+    syncswapStablePoolFactory,
+  } = networks["zkSync Era Mainnet"];
+
+  const provider: ethers.JsonRpcProvider = new ethers.JsonRpcProvider(url);
 
   const wallet: ethers.Wallet = new ethers.Wallet(privateKey, provider);
 
@@ -29,14 +35,14 @@ export const syncswapTrade = async (
   const isNativeTokenIn = inToken.symbol === "ETH";
   const isNativeTokenOut = outToken.symbol === "ETH";
 
-  const syncswapRouter: ethers.Contract = new ethers.Contract(
-    network.syncswapRouter,
+  const syncswapRouterContract: ethers.Contract = new ethers.Contract(
+    syncswapRouter,
     RouterContractAbi,
     wallet
   );
 
   const fromTokenContract: ethers.Contract = new ethers.Contract(
-    isNativeTokenIn ? network.wethAddress : inToken.address,
+    isNativeTokenIn ? wethAddress : inToken.address,
     Erc20Abi,
     wallet
   );
@@ -48,43 +54,40 @@ export const syncswapTrade = async (
   const inAmount = balance.mul(percentageOfWalletBallance).div(100);
 
   const poolFactoryContract: ethers.Contract = new ethers.Contract(
-    poolType
-      ? network.syncswapClassicPoolFactory
-      : network.syncswapStablePoolFactory,
+    poolType ? syncswapClassicPoolFactory : syncswapStablePoolFactory,
     StablePoolFactoryAbi,
     provider
   );
 
   const lpTokenAddress = await poolFactoryContract.getPool(
-    isNativeTokenIn ? network.wethAddress : inToken.address,
-    isNativeTokenOut ? network.wethAddress : outToken.address
+    isNativeTokenIn ? wethAddress : inToken.address,
+    isNativeTokenOut ? wethAddress : outToken.address
   );
 
   const pool: Contract = new Contract(lpTokenAddress, PoolAbi, provider);
-  const reserves: [BigNumber, BigNumber] = await pool.getReserves();
+  const reserves: [bigint, bigint] = await pool.getReserves();
   const [reserveInToken, reserveOutToken] =
-    (isNativeTokenIn ? network.wethAddress : inToken.address) <
-    (isNativeTokenOut ? network.wethAddress : outToken.address)
+    (isNativeTokenIn ? wethAddress : inToken.address) <
+    (isNativeTokenOut ? wethAddress : outToken.address)
       ? reserves
       : [reserves[1], reserves[0]];
 
   const slippageRate = 99;
 
-  const amountOutMin = reserveOutToken
-    .mul(inAmount)
-    .div(reserveInToken)
-    .mul(slippageRate)
-    .div(100);
+  const amountOutMin =
+    (((reserveOutToken * BigInt(inAmount)) / BigInt(reserveInToken)) *
+      BigInt(slippageRate)) /
+    BigInt(100);
 
   const allowance = await fromTokenContract.allowance(
     wallet.address,
-    network.syncswapRouter
+    syncswapRouterContract
   );
 
   if (allowance.lt(inAmount) && !isNativeTokenIn) {
     const approveTx = await fromTokenContract.approve(
-      network.syncswapRouter,
-      ethers.constants.MaxUint256
+      syncswapRouterContract,
+      ethers.MaxUint256
     );
 
     await approveTx.wait();
@@ -99,10 +102,10 @@ export const syncswapTrade = async (
   // 2 - withdraw and wrap to wETH
   const withdrawMode = 1;
 
-  const swapData: string = defaultAbiCoder.encode(
+  const swapData: string = new AbiCoder().encode(
     ["address", "address", "uint8"],
     [
-      isNativeTokenIn ? network.wethAddress : inToken.address,
+      isNativeTokenIn ? wethAddress : inToken.address,
       wallet.address,
       withdrawMode,
     ] // tokenIn, to, withdraw mode
@@ -113,7 +116,7 @@ export const syncswapTrade = async (
     {
       pool: lpTokenAddress,
       data: swapData,
-      callback: ethers.constants.AddressZero, // we don't have a callback
+      callback: ethers.ZeroAddress, // we don't have a callback
       callbackData: "0x",
     },
   ];
@@ -127,10 +130,10 @@ export const syncswapTrade = async (
     },
   ];
 
-  const swapTx = await syncswapRouter.swap(
+  const swapTx = await syncswapRouterContract.swap(
     paths,
     amountOutMin,
-    BigNumber.from(Math.floor(Date.now() / 1000)).add(1800),
+    BigInt(Math.floor(Date.now() / 1000)) + BigInt(1800),
     {
       value: isNativeTokenIn ? inAmount : 0,
     }

@@ -5,14 +5,16 @@
   "main": "index.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "ts-node ./index.ts"
+    "balances": "ts-node ./src/balances/index.ts",
+    "trade": "ts-node ./src/trade/index.ts"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "commander": "^11.0.0",
     "dotenv": "^16.3.1",
-    "ethers": "^5.6.2"
+    "ethers": "^6.6.3"
   },
   "devDependencies": {
     "@types/node": "^18.15.13",

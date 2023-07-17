@@ -1,14 +1,15 @@
 import { ethers } from "ethers";
-import { network } from "..";
 import Erc20Abi from "../abis/ERC20_ABI.json";
-import { Token } from "../data/tokens";
+import { Token } from "../constants/tokens";
 
 export const getTokenBalance = async (
   privateKey: string,
-  inToken: Token
+  inToken: Token,
+  networks: any
 ): Promise<void> => {
-  const provider: ethers.providers.JsonRpcProvider =
-    new ethers.providers.JsonRpcProvider(network.url);
+  const provider: ethers.JsonRpcProvider = new ethers.JsonRpcProvider(
+    networks.url
+  );
 
   const wallet: ethers.Wallet = new ethers.Wallet(privateKey, provider);
   const isNativeTokenIn = inToken.symbol === "ETH";
@@ -24,8 +25,9 @@ export const getTokenBalance = async (
     : await fromTokenContract.balanceOf(wallet.address);
 
   console.log(
-    `${inToken.symbol} Balance for ${
-      wallet.address
-    }: ${ethers.utils.formatUnits(balance, inToken.decimals)}`
+    `${inToken.symbol} Balance for ${wallet.address}: ${ethers.formatUnits(
+      balance,
+      inToken.decimals
+    )}`
   );
 };

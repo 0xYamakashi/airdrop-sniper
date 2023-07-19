@@ -1,6 +1,5 @@
-import { findToken } from "../../utils/findToken";
-import { getTokenBalance } from "../../utils/getTokenBalance";
 import { program } from "commander";
+import { getNetwork } from "../../constants/networks";
 import { getTokenBalances } from "./balances";
 
 async function main(): Promise<void> {
@@ -12,7 +11,12 @@ async function main(): Promise<void> {
   program.parse(process.argv);
   const { inTokenSymbol, network } = program.opts();
 
-  await getTokenBalances(inTokenSymbol, network);
+  const definedNetwork = getNetwork(network);
+
+  if (!definedNetwork) {
+    throw new Error("No network with this key!");
+  }
+  await getTokenBalances(inTokenSymbol, definedNetwork);
 }
 
 main();

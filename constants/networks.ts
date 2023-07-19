@@ -1,6 +1,12 @@
 import { ethers } from "ethers";
 
-type NetworkNames = "zkSync Era Mainnet";
+export enum NetworkNames {
+  zksync = "zkSync Era Mainnet",
+}
+
+export function getNetwork(key: keyof typeof NetworkNames): Networks[NetworkNames] | undefined {
+  return networks[NetworkNames[key]];
+}
 
 type Networks = {
   [key in NetworkNames]: {
@@ -10,7 +16,7 @@ type Networks = {
 
 export const networks: Networks = {
   "zkSync Era Mainnet": {
-    name: "zkSync Era Mainnet",
+    name: "zkSyncEraMainnet",
     chainId: "324",
     url: "https://mainnet.era.zksync.io",
     syncswapRouterAddress: "0x2da10A1e27bF85cEdD8FFb1AbBe97e53391C0295",

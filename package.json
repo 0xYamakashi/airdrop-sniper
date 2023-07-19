@@ -6,7 +6,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "balances": "ts-node ./src/balances/index.ts",
-    "trade": "ts-node ./src/trade/index.ts"
+    "trade": "ts-node ./src/trade/index.ts",
+    "wrap": "ts-node ./src/wrap/index.ts"
   },
   "keywords": [],
   "author": "",

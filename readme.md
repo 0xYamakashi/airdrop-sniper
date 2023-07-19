@@ -12,16 +12,16 @@ To retrieve a token balance for a specific token on a specific network, you can 
 
 #### Command format:
 
-`yarn balances --inToken=<token> --network=<network>`
+`yarn balances --inTokenSymbol=<token> --network=<network>`
 
 #### Options:
 
-- `--inToken=<token>`: (**Required**) Specify the token for which you want to get the balance. The token should be passed as a symbol, for example `ETH`.
-- `--network=<network>`: (**Required**) Specify the network where the token is located. The network should be passed as a string, for example `zksync`.
+- `--inTokenSymbol=<token>`: (**Required**) Specify the token for which you want to get the balance. The token should be passed as a symbol, for example `ETH`.
+- `--inTokenSymbol=<network>`: (**Required**) Specify the network where the token is located. The network should be passed as a string, for example `zksync`.
 
 #### Example:
 
-`yarn balances --inToken=USDC --network=zksync`
+`yarn balances --inTokenSymbol=USDC --network=zksync`
 
 ### `trade`
 

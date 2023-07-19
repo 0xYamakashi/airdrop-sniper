@@ -51,7 +51,7 @@ export const syncswapTrade = async (
     ? await provider.getBalance(wallet.address)
     : await fromTokenContract.balanceOf(wallet.address);
 
-  const inAmount = balance.mul(percentageOfWalletBallance).div(100);
+  const inAmount = balance * BigInt(percentageOfWalletBallance) / BigInt(100);
 
   const poolFactoryContract: ethers.Contract = new ethers.Contract(
     poolType ? syncswapClassicPoolFactory : syncswapStablePoolFactory,

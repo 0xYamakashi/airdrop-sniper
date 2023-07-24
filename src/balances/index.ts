@@ -2,7 +2,6 @@ import { program } from "commander";
 import { getNetwork } from "../../constants/networks";
 import { getTokenBalances } from "./balances";
 import { config } from "dotenv";
-
 config();
 
 async function main(): Promise<void> {

@@ -4,11 +4,13 @@ export enum NetworkNames {
   zksync = "zkSync Era Mainnet",
 }
 
-export function getNetwork(key: keyof typeof NetworkNames): Networks[NetworkNames] | undefined {
+export function getNetwork(
+  key: keyof typeof NetworkNames
+): Networks[NetworkNames] | undefined {
   return networks[NetworkNames[key]];
 }
 
-type Networks = {
+export type Networks = {
   [key in NetworkNames]: {
     [key: string]: string;
   };

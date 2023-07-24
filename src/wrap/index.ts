@@ -4,6 +4,7 @@ import { config } from "dotenv";
 import { wrap } from "./wrap";
 import { unWrap } from "./unWrap";
 import { MAX_DELAY, MIN_DELAY } from "../../constants";
+import { inTokenOption } from "../../utils/commanderOptions";
 
 config();
 const privateKeys = (process.env.PRIVATE_KEYS || "").split(",");
@@ -12,7 +13,7 @@ async function main(): Promise<void> {
   program
     .description("A sample application to parse options")
     .requiredOption("--option <option>", "Specify a VALUE")
-    .requiredOption("--network <network>", "Specify a VALUE")
+    .requiredOption(...inTokenOption)
     .requiredOption(
       "--percentageOfBalanceForSwap <percentageOfBalanceForSwap>",
       "Specify a VALUE"
@@ -20,7 +21,6 @@ async function main(): Promise<void> {
 
   program.parse(process.argv);
   const { option, network, percentageOfBalanceForSwap } = program.opts();
-  console.log("test");
 
   const definedNetwork = getNetwork(network);
   if (!definedNetwork) {

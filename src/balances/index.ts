@@ -1,17 +1,22 @@
 import { program } from "commander";
-import { getNetwork } from "../../constants/networks";
+import { NetworkNames, getNetwork } from "../../constants/networks";
 import { getTokenBalances } from "./balances";
 import { config } from "dotenv";
+import { inTokenOption, networkOption } from "../../utils/commanderOptions";
 config();
 
 async function main(): Promise<void> {
   program
     .description("A sample application to parse options")
-    .requiredOption("--inTokenSymbol <inTokenSymbol>", "Specify a VALUE")
-    .requiredOption("--network <network>", "Specify a VALUE");
+    .requiredOption(...inTokenOption)
+    .requiredOption(...networkOption);
 
   program.parse(process.argv);
-  const { inTokenSymbol, network } = program.opts();
+  const {
+    inTokenSymbol,
+    network,
+  }: { inTokenSymbol: string; network: keyof typeof NetworkNames } =
+    program.opts();
 
   const definedNetwork = getNetwork(network);
 

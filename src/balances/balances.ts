@@ -1,7 +1,5 @@
 import { findToken } from "../../utils/findToken";
 import { getTokenBalance } from "../../utils/getTokenBalance";
-import { config } from "dotenv";
-config();
 
 const privateKeys = (process.env.PRIVATE_KEYS || "").split(",");
 

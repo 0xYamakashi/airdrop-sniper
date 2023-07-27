@@ -1,21 +1,18 @@
 import { ethers } from "ethers";
 
-export enum NetworkNames {
-  zksync = "zkSync Era Mainnet",
-  mainnet = "Ethereum Mainnet",
-}
+export type NetworkNames = "zksync" | "mainnet" | "linea";
 
-export function getNetwork(key: keyof typeof NetworkNames) {
-  return networks[NetworkNames[key]];
-}
+// export function getNetwork(key: NetworkNames) {
+//   return networks[NetworkNames[key]];
+// }
 
 export const networks = {
-  "Ethereum Mainnet": {
+  mainnet: {
     name: "Ethereum Mainnet",
     chainId: "1",
     url: "https://mainnet.infura.io/v3/7a4dbd3a4c864f8e83a151ea6f05a933",
   },
-  "zkSync Era Mainnet": {
+  zksync: {
     name: "zkSync Era Mainnet",
     chainId: "324",
     url: "https://mainnet.era.zksync.io",
@@ -27,9 +24,8 @@ export const networks = {
     muteRouterAddress: "0x8B791913eB07C32779a16750e3868aA8495F5964",
     ethAddress: ethers.ZeroAddress,
     wethAddress: "0x5aea5775959fbc2557cc8789bc1bf90a239d9a91",
-    wbtcAddress: "0xbbeb516fb02a01611cbbe0453fe3c580d7281011",
   },
-  Linea: {
+  linea: {
     name: "Linea",
     url: "https://linea-mainnet.infura.io/v3",
     chainId: "59144",

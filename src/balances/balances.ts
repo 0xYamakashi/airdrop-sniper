@@ -1,11 +1,11 @@
 import { formatUnits } from "ethers";
-import { networks } from "../../constants/networks";
+import { NetworkNames, networks } from "../../constants/networks";
 import { findToken } from "../../utils/findToken";
 import { getTokenBalance } from "../../utils/getTokenBalance";
 
 export async function getTokenBalances(
   inTokenSymbol: string,
-  network: (typeof networks)["zkSync Era Mainnet" | "Ethereum Mainnet"]
+  network: (typeof networks)[NetworkNames]
 ) {
   const privateKeys = (process.env.PRIVATE_KEYS || "").split(",");
 

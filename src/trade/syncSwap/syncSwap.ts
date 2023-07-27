@@ -27,7 +27,7 @@ export const syncswapTrade = async (
     wethAddress,
     syncswapClassicPoolFactoryAddress,
     syncswapStablePoolFactoryAddress,
-  } = networks["zkSync Era Mainnet"];
+  } = networks["zksync"];
 
   const provider = new JsonRpcProvider(url);
 

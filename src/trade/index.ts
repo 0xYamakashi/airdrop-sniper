@@ -103,7 +103,7 @@ async function main(): Promise<void> {
         const { balance } = await getTokenBalance(
           privateKey,
           inToken,
-          networks["zkSync Era Mainnet"]
+          networks["zksync"]
         );
 
         balances = {

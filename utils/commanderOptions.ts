@@ -2,7 +2,7 @@ import { NetworkNames } from "../constants/networks";
 
 export const networkOption = [
   "-n --network <network>",
-  `Specify a network. Options: ${Object.keys(NetworkNames)}`,
+  `Specify a network. Options: `,
 ] as const;
 
 export const inTokenOption = [

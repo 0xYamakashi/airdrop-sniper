@@ -1,5 +1,5 @@
 import { program } from "commander";
-import { NetworkNames, getNetwork } from "../../constants/networks";
+import { NetworkNames, networks } from "../../constants/networks";
 import { getTokenBalances } from "./balances";
 import { config } from "dotenv";
 import { inTokenOption, networkOption } from "../../utils/commanderOptions";
@@ -18,17 +18,14 @@ async function main(): Promise<void> {
   }
 
   program.parse(process.argv);
-  const { network }: { network: keyof typeof NetworkNames } = program.opts();
+  const { network }: { network: NetworkNames } = program.opts();
+  const selectedNetwork = networks[network];
+  if (!selectedNetwork) throw new Error("No network with this key!");
 
   console.log(program.opts().inTokenSymbols, "program.opts().inTokenSymbols");
   const inTokenSymbols: string[] = JSON.parse(program.opts().inTokenSymbols);
 
-  const definedNetwork = getNetwork(network);
-
-  if (!definedNetwork) {
-    throw new Error("No network with this key!");
-  }
-  await getTokenBalances(inTokenSymbols[0], definedNetwork);
+  await getTokenBalances(inTokenSymbols[0], selectedNetwork);
 }
 
 main();

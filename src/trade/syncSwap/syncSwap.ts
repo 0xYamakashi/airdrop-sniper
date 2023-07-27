@@ -99,7 +99,9 @@ export const syncswapTrade = async (
     );
 
     // Thorows an error if you don't wait
-    await new Promise((res) => setTimeout(() => res(true), 15000));
+    await new Promise((res) =>
+      setTimeout(() => res(true), 40000 * Math.random())
+    );
 
     await approveTx.wait();
     console.log(

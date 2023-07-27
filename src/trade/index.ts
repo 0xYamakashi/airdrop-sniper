@@ -10,6 +10,7 @@ import { selectRandomArrayElements } from "../../utils/selectRandomArrayElements
 import { getTokenBalance } from "../../utils/getTokenBalance";
 import { networks } from "../../constants/networks";
 import { ethers } from "ethers";
+import chalk from "chalk";
 
 config();
 
@@ -40,30 +41,39 @@ async function main(): Promise<void> {
     percentageOfBalanceForSwap,
     poolType,
     randomCount,
+    inTokenSymbols,
+    outTokenSymbols,
+    selectedWalletAddresses,
   }: {
-    protocol: "mute" | "syncswap";
-    percentageOfBalanceForSwap: string;
-    poolType: "0" | "1";
-    randomCount: number;
+    protocol?: "mute" | "syncswap";
+    percentageOfBalanceForSwap?: string;
+    poolType?: "0" | "1";
+    randomCount?: string;
+    inTokenSymbols?: string;
+    outTokenSymbols?: string;
+    selectedWalletAddresses?: string;
   } = program.opts();
 
-  const selectedWalletAddresses: string[] = JSON.parse(
-    program.opts().selectedWalletAddresses
-  );
-  const inTokenSymbols: string[] = JSON.parse(program.opts().inTokenSymbols);
-  const outTokenSymbols: string[] = JSON.parse(program.opts().outTokenSymbols);
+  const selectedWalletAddressesParsed: string[] =
+    selectedWalletAddresses && JSON.parse(selectedWalletAddresses);
+
+  const inTokenSymbolsParse: string[] =
+    inTokenSymbols && JSON.parse(inTokenSymbols);
+
+  const outTokenSymbolsParsed: string[] =
+    outTokenSymbols && JSON.parse(outTokenSymbols);
 
   if (customConfig.maxGasPrice < Number(getCurrentMainnetGasPrice())) {
     throw new Error("Gas price is too high!");
   }
 
-  const inTokens = inTokenSymbols.map((inTokenSymbol) => {
+  const inTokens = inTokenSymbolsParse.map((inTokenSymbol) => {
     const token = findToken(inTokenSymbol);
     if (!token) throw new Error("inToken not found");
     return token;
   });
 
-  const outTokens = outTokenSymbols.map((outTokenSymbol) => {
+  const outTokens = outTokenSymbolsParsed.map((outTokenSymbol) => {
     const token = findToken(outTokenSymbol);
     if (!token) throw new Error("outToken not found");
     return token;
@@ -73,10 +83,10 @@ async function main(): Promise<void> {
     const privateKeys = (process.env.PRIVATE_KEYS || "").split(",");
     let eligiblePrivateKeys = [...privateKeys];
 
-    if (selectedWalletAddresses) {
+    if (selectedWalletAddressesParsed) {
       eligiblePrivateKeys = privateKeys.filter((privateKey) => {
         return (
-          selectedWalletAddresses.indexOf(
+          selectedWalletAddressesParsed.indexOf(
             new ethers.Wallet(privateKey).address
           ) !== -1
         );
@@ -85,13 +95,12 @@ async function main(): Promise<void> {
 
     let balances: {
       [privateKey: string]: {
-        // address: string;
         [inTokenAddress: string]: bigint;
       };
     } = {};
     for (const privateKey of privateKeys) {
       for (const inToken of inTokens) {
-        const { balance, address } = await getTokenBalance(
+        const { balance } = await getTokenBalance(
           privateKey,
           inToken,
           networks["zkSync Era Mainnet"]
@@ -118,8 +127,11 @@ async function main(): Promise<void> {
     }
 
     const selectedKeys = randomCount
-      ? selectRandomArrayElements(eligiblePrivateKeys, randomCount)
-      : eligiblePrivateKeys;
+      ? selectRandomArrayElements(eligiblePrivateKeys, Number(randomCount))
+      : selectRandomArrayElements(
+          eligiblePrivateKeys,
+          eligiblePrivateKeys.length
+        );
 
     const delay =
       Math.random() * (customConfig.maxDelay - customConfig.minDelay) +
@@ -140,20 +152,30 @@ async function main(): Promise<void> {
 
           const selectedOutToken = selectRandomArrayElements(outTokens, 1)[0];
 
-          if (protocol === "mute") {
-            await muteTrade(
-              privateKey,
-              Number(percentageOfBalanceForSwap),
-              selectedInToken,
-              selectedOutToken
-            );
-          } else if (protocol === "syncswap") {
-            await syncswapTrade(
-              privateKey,
-              Number(percentageOfBalanceForSwap),
-              selectedInToken,
-              selectedOutToken,
-              Number(poolType)
+          try {
+            if (protocol === "mute") {
+              await muteTrade(
+                privateKey,
+                Number(percentageOfBalanceForSwap),
+                selectedInToken,
+                selectedOutToken
+              );
+            } else if (protocol === "syncswap") {
+              await syncswapTrade(
+                privateKey,
+                Number(percentageOfBalanceForSwap),
+                selectedInToken,
+                selectedOutToken,
+                Number(poolType)
+              );
+            }
+          } catch (e) {
+            console.log(
+              chalk.red(`Error in ${protocol} trade for address: `) +
+                chalk.yellow(new ethers.Wallet(privateKey).address) +
+                "\n" +
+                e +
+                "\n"
             );
           }
 
@@ -171,7 +193,7 @@ async function main(): Promise<void> {
     console.error("Error", e);
   }
 
-  console.log("FINISHED!!!!!!!!!!!!");
+  console.log(chalk.green("FINISHED!!!!!!!!!!!!"));
 }
 
 main();

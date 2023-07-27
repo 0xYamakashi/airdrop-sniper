@@ -46,6 +46,11 @@ export const muteTrade = async (
       ethers.MaxUint256
     );
 
+    // Thorows an error if you don't wait
+    await new Promise((res) =>
+      setTimeout(() => res(true), 40000 * Math.random())
+    );
+
     await approveTx.wait();
     console.log(
       `Token approved in tx: ${approveTx.hash} for ${wallet.address}`

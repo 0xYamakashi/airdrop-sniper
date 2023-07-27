@@ -29,4 +29,15 @@ export const networks = {
     wethAddress: "0x5aea5775959fbc2557cc8789bc1bf90a239d9a91",
     wbtcAddress: "0xbbeb516fb02a01611cbbe0453fe3c580d7281011",
   },
+  Linea: {
+    name: "Linea",
+    url: "https://linea-mainnet.infura.io/v3",
+    chainId: "59144",
+    syncswapRouterAddress: "0x80e38291e06339d10AAB483C65695D004dBD5C69",
+    syncswapStablePoolFactoryAddress:
+      "0xE4CF807E351b56720B17A59094179e7Ed9dD3727",
+    syncswapClassicPoolFactoryAddress:
+      "0x37BAc764494c8db4e54BDE72f6965beA9fa0AC2d",
+    wethAdress: "0xe5d7c2a44ffddf6b295a15c148167daaaf5cf34f",
+  },
 } as const;

@@ -71,6 +71,14 @@ export const tokens: { [key in NetworkNames]: Token[] } = {
   mainnet: [],
   linea: [
     {
+      id: 0,
+      address: ethers.ZeroAddress,
+      symbol: "ETH",
+      decimals: 18,
+      kind: "NATIVE",
+      is_nft: false,
+    },
+    {
       id: 1,
       address: "0xf56dc6695cf1f5c364edebc7dc7077ac9b586068",
       symbol: "USDC",

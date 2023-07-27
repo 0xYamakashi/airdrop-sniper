@@ -1,10 +1,15 @@
 import { program } from "commander";
-import { NetworkNames, networks } from "../../constants/networks";
+import {
+  NetworkNames,
+  netowrksArray,
+  networks,
+} from "../../constants/networks";
 import { getTokenBalances } from "./balances";
 import { config } from "dotenv";
 import { inTokenOption, networkOption } from "../../utils/commanderOptions";
 import customConfig from "../../config";
 import { getCurrentMainnetGasPrice } from "../../utils/getGasPrice";
+import chalk from "chalk";
 config();
 
 async function main(): Promise<void> {
@@ -19,13 +24,13 @@ async function main(): Promise<void> {
 
   program.parse(process.argv);
   const { network }: { network: NetworkNames } = program.opts();
-  const selectedNetwork = networks[network];
-  if (!selectedNetwork) throw new Error("No network with this key!");
 
-  console.log(program.opts().inTokenSymbols, "program.opts().inTokenSymbols");
+  if (!network || netowrksArray.indexOf(network) === -1)
+    throw new Error(chalk.red(`Network ${network} not supported`));
+
   const inTokenSymbols: string[] = JSON.parse(program.opts().inTokenSymbols);
 
-  await getTokenBalances(inTokenSymbols[0], selectedNetwork);
+  await getTokenBalances(inTokenSymbols, networks[network]);
 }
 
 main();

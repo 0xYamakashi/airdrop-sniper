@@ -1,6 +1,7 @@
 import { ethers } from "ethers";
 
-export type NetworkNames = "zksync" | "mainnet" | "linea";
+export const netowrksArray = ["zksync", "mainnet", "linea"] as const;
+export type NetworkNames = (typeof netowrksArray)[number];
 
 // export function getNetwork(key: NetworkNames) {
 //   return networks[NetworkNames[key]];
@@ -8,12 +9,12 @@ export type NetworkNames = "zksync" | "mainnet" | "linea";
 
 export const networks = {
   mainnet: {
-    name: "Ethereum Mainnet",
+    name: "mainnet",
     chainId: "1",
     url: "https://mainnet.infura.io/v3/7a4dbd3a4c864f8e83a151ea6f05a933",
   },
   zksync: {
-    name: "zkSync Era Mainnet",
+    name: "zksync",
     chainId: "324",
     url: "https://mainnet.era.zksync.io",
     syncswapRouterAddress: "0x2da10A1e27bF85cEdD8FFb1AbBe97e53391C0295",
@@ -26,8 +27,8 @@ export const networks = {
     wethAddress: "0x5aea5775959fbc2557cc8789bc1bf90a239d9a91",
   },
   linea: {
-    name: "Linea",
-    url: "https://linea-mainnet.infura.io/v3",
+    name: "linea",
+    url: "https://linea-mainnet.infura.io/v3/7a4dbd3a4c864f8e83a151ea6f05a933",
     chainId: "59144",
     syncswapRouterAddress: "0x80e38291e06339d10AAB483C65695D004dBD5C69",
     syncswapStablePoolFactoryAddress:

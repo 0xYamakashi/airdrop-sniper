@@ -3,7 +3,7 @@ import { networks } from "../constants/networks";
 
 export async function getCurrentMainnetGasPrice() {
   const provider: JsonRpcProvider = new JsonRpcProvider(
-    networks["Ethereum Mainnet"].url
+    networks["mainnet"].url
   );
 
   const feeData = await provider.getFeeData();

@@ -12,8 +12,6 @@ export const getTokenBalance = async (
     network.url
   );
 
-  console.log(provider, "providerproviderprovider");
-
   const wallet: ethers.Wallet = new ethers.Wallet(privateKey, provider);
   const isNativeTokenIn = inToken.symbol === "ETH";
 

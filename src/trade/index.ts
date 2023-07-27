@@ -9,6 +9,7 @@ import { getCurrentMainnetGasPrice } from "../../utils/getGasPrice";
 import { selectRandomArrayElements } from "../../utils/selectRandomArrayElements";
 import { getTokenBalance } from "../../utils/getTokenBalance";
 import { networks } from "../../constants/networks";
+import { ethers } from "ethers";
 
 config();
 
@@ -39,15 +40,16 @@ async function main(): Promise<void> {
     percentageOfBalanceForSwap,
     poolType,
     randomCount,
-    selectedWalletAddresses,
   }: {
     protocol: "mute" | "syncswap";
     percentageOfBalanceForSwap: string;
     poolType: "0" | "1";
     randomCount: number;
-    selectedWalletAddresses: string[];
   } = program.opts();
 
+  const selectedWalletAddresses: string[] = JSON.parse(
+    program.opts().selectedWalletAddresses
+  );
   const inTokenSymbols: string[] = JSON.parse(program.opts().inTokenSymbols);
   const outTokenSymbols: string[] = JSON.parse(program.opts().outTokenSymbols);
 
@@ -69,6 +71,17 @@ async function main(): Promise<void> {
 
   try {
     const privateKeys = (process.env.PRIVATE_KEYS || "").split(",");
+    let eligiblePrivateKeys = [...privateKeys];
+
+    if (selectedWalletAddresses) {
+      eligiblePrivateKeys = privateKeys.filter((privateKey) => {
+        return (
+          selectedWalletAddresses.indexOf(
+            new ethers.Wallet(privateKey).address
+          ) !== -1
+        );
+      });
+    }
 
     let balances: {
       [privateKey: string]: {
@@ -91,7 +104,6 @@ async function main(): Promise<void> {
       }
     }
 
-    let eligiblePrivateKeys = [...privateKeys];
     for (let privKey in balances) {
       const value = balances[privKey];
       inTokens.forEach((inToken) => {

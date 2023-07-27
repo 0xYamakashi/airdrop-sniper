@@ -42,4 +42,4 @@ To execute a trade of a specific token to another on a specified protocol, you c
 
 #### Example:
 
-`yarn trade --protocol=syncswap --inTokenSymbol=USDT --outTokenSymbol=USDC --percentageOfBalanceForSwap=100 --poolType=0`
+`yarn trade --protocol=syncswap --inTokenSymbols='["USDC","ETH"]' --outTokenSymbols='["USDT"]' --percentageOfBalanceForSwap=40 --poolType=1`

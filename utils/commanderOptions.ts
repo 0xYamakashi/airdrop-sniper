@@ -6,7 +6,7 @@ export const networkOption = [
 ] as const;
 
 export const inTokenOption = [
-  "--inTokenSymbol <inTokenSymbol>",
+  "--inTokenSymbols <inTokenSymbols>",
   "Specify a paying token",
-  "ETH",
+  '["ETH"]',
 ] as const;

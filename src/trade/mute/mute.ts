@@ -1,8 +1,8 @@
 import { ethers } from "ethers";
 import { Token } from "../../../constants/tokens";
-import RouterContractABI from "../../../abis/mute/ROUTER_ABI.json";
-import Erc20Abi from "../../../abis/ERC20_ABI.json";
 import { networks } from "../../../constants/networks";
+import { ERC20_ABI__factory, ROUTER_ABI__factory } from "../../../abis/types";
+import { calculateGasMargin } from "../../../utils/calculateGasMargin";
 
 export const muteTrade = async (
   privateKey: string,
@@ -27,17 +27,9 @@ export const muteTrade = async (
 
   console.log(`STARTING TRADE FOR ADDRESS: ${wallet.address}`);
 
-  const muteRouter: ethers.Contract = new ethers.Contract(
-    muteRouterAddress,
-    RouterContractABI,
-    wallet
-  );
+  const muteRouter = ROUTER_ABI__factory.connect(muteRouterAddress, wallet);
 
-  const fromTokenContract: ethers.Contract = new ethers.Contract(
-    inToken.address,
-    Erc20Abi,
-    wallet
-  );
+  const fromTokenContract = ERC20_ABI__factory.connect(inToken.address, wallet);
 
   const allowance = await fromTokenContract.allowance(
     wallet.address,
@@ -46,9 +38,9 @@ export const muteTrade = async (
 
   const balance = await fromTokenContract.balanceOf(wallet.address);
 
-  const inAmount = balance.mul(percentageOfWalletBalance).div(100);
+  const inAmount = (balance * BigInt(percentageOfWalletBalance)) / BigInt(100);
 
-  if (allowance.lt(inAmount)) {
+  if (allowance < inAmount) {
     const approveTx = await fromTokenContract.approve(
       muteRouter,
       ethers.MaxUint256
@@ -62,13 +54,28 @@ export const muteTrade = async (
 
   const path = [inToken.address, outToken.address];
 
+  const deadline = BigInt(Math.floor(Date.now() / 1000)) + BigInt(1800);
+  const amountOutMin = (inAmount * BigInt(99)) / BigInt(100);
+
+  const swapTxGasEstimate =
+    await muteRouter.swapExactTokensForTokens.estimateGas(
+      balance,
+      amountOutMin,
+      path,
+      wallet.address,
+      deadline,
+      [true, true]
+    );
+
   const swapTx = await muteRouter.swapExactTokensForTokens(
     balance,
-    inAmount.mul(99).div(100),
+    amountOutMin,
     path,
     wallet.address,
-    BigInt(Math.floor(Date.now() / 1000)) + BigInt(1800),
-    [true, true]
+    deadline,
+    [true, true],
+    { gasLimit: calculateGasMargin(swapTxGasEstimate) }
   );
+
   console.log(`Tokens swaped in tx: ${swapTx.hash} for ${wallet.address}`);
 };

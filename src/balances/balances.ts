@@ -1,18 +1,32 @@
-import { NetworkNames, Networks } from "../../constants/networks";
+import { formatUnits } from "ethers";
+import { networks } from "../../constants/networks";
 import { findToken } from "../../utils/findToken";
 import { getTokenBalance } from "../../utils/getTokenBalance";
 
 export async function getTokenBalances(
   inTokenSymbol: string,
-  network: Networks[NetworkNames]
+  network: (typeof networks)["zkSync Era Mainnet" | "Ethereum Mainnet"]
 ) {
   const privateKeys = (process.env.PRIVATE_KEYS || "").split(",");
+
   const inToken = findToken(inTokenSymbol);
 
   if (!inToken) {
     throw new Error("inToken not found");
   }
+
   for (const privateKey of privateKeys) {
-    await getTokenBalance(privateKey, inToken, network);
+    const { balance, address } = await getTokenBalance(
+      privateKey,
+      inToken,
+      network
+    );
+
+    console.log(
+      `${inToken.symbol} Balance for ${address}: ${formatUnits(
+        balance,
+        inToken.decimals
+      )}`
+    );
   }
 }

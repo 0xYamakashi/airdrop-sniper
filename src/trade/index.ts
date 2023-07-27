@@ -3,70 +3,163 @@ import { findToken } from "../../utils/findToken";
 import { program } from "commander";
 import { muteTrade } from "./mute/mute";
 import { syncswapTrade } from "./syncSwap/syncSwap";
-import { MAX_DELAY, MIN_DELAY } from "../../constants";
 import { inTokenOption } from "../../utils/commanderOptions";
+import customConfig from "../../config";
+import { getCurrentMainnetGasPrice } from "../../utils/getGasPrice";
+import { selectRandomArrayElements } from "../../utils/selectRandomArrayElements";
+import { getTokenBalance } from "../../utils/getTokenBalance";
+import { networks } from "../../constants/networks";
 
 config();
 
 async function main(): Promise<void> {
   program
     .description("A sample application to parse options")
-    .requiredOption("--protocol <protocol>", "Specify a ")
+    .requiredOption("--protocol <protocol>", "Specify a protocol")
     .requiredOption(...inTokenOption)
-    .requiredOption("--outTokenSymbol <outTokenSymbol>", "Alpha")
+    .requiredOption("--outTokenSymbols <outTokenSymbols>", "Alpha")
     .requiredOption(
       "--percentageOfBalanceForSwap <percentageOfBalanceForSwap>",
       "Specify a VALUE"
     )
-    .requiredOption("--poolType <poolType>", "Beta");
+    .requiredOption("--poolType <poolType>", "Beta")
+    .option(
+      "--randomCount <randomCount>",
+      "randomCount random number of accounts you want to interact with"
+    )
+    .option(
+      "--selectedPrivateKeyIndex <selectedPrivateKeyIndex>",
+      "Index of private key you want to use"
+    );
 
   program.parse(process.argv);
 
   const {
     protocol,
-    inTokenSymbol,
-    outTokenSymbol,
     percentageOfBalanceForSwap,
     poolType,
+    randomCount,
+    selectedPrivateKeyIndex,
+  }: {
+    protocol: "mute" | "syncswap";
+    percentageOfBalanceForSwap: string;
+    poolType: "0" | "1";
+    randomCount: number;
+    selectedPrivateKeyIndex: number;
   } = program.opts();
 
-  const inToken = findToken(inTokenSymbol);
-  const outToken = findToken(outTokenSymbol);
+  console.log(program.opts().inTokenSymbols, program.opts().outTokenSymbols);
 
-  if (!inToken) throw new Error("inToken not found");
-  if (!outToken) throw new Error("outToken not found");
+  const inTokenSymbols: string[] = JSON.parse(program.opts().inTokenSymbols);
+  const outTokenSymbols: string[] = JSON.parse(program.opts().outTokenSymbols);
+
+  console.log({
+    inTokenSymbols,
+    outTokenSymbols,
+  });
+
+  if (customConfig.maxGasPrice < Number(getCurrentMainnetGasPrice())) {
+    throw new Error("Gas price is too high!");
+  }
+
+  const inTokens = inTokenSymbols.map((inTokenSymbol) => {
+    const token = findToken(inTokenSymbol);
+    if (!token) throw new Error("inToken not found");
+    return token;
+  });
+
+  const outTokens = outTokenSymbols.map((outTokenSymbol) => {
+    const token = findToken(outTokenSymbol);
+    if (!token) throw new Error("outToken not found");
+    return token;
+  });
 
   try {
     const privateKeys = (process.env.PRIVATE_KEYS || "").split(",");
-    const delay = Math.random() * (MAX_DELAY - MIN_DELAY) + MIN_DELAY;
+
+    let balances: {
+      [privateKey: string]: {
+        // address: string;
+        [inTokenAddress: string]: bigint;
+      };
+    } = {};
+    for (const privateKey of privateKeys) {
+      for (const inToken of inTokens) {
+        const { balance, address } = await getTokenBalance(
+          privateKey,
+          inToken,
+          networks["zkSync Era Mainnet"]
+        );
+
+        balances = {
+          ...balances,
+          [privateKey]: { ...balances[privateKey], [inToken.address]: balance },
+        };
+      }
+    }
+
+    let eligiblePrivateKeys = [...privateKeys];
+    for (let privKey in balances) {
+      const value = balances[privKey];
+      inTokens.forEach((inToken) => {
+        if (value[inToken.address].valueOf() === BigInt(0)) {
+          delete balances[privKey][inToken.address];
+        }
+
+        if (Object.keys(balances[privKey]).length === 0) {
+          eligiblePrivateKeys.splice(eligiblePrivateKeys.indexOf(privKey), 1);
+        }
+      });
+    }
+
+    const selectedKeys = randomCount
+      ? selectRandomArrayElements(eligiblePrivateKeys, randomCount)
+      : selectedPrivateKeyIndex
+      ? eligiblePrivateKeys[selectedPrivateKeyIndex]
+      : eligiblePrivateKeys;
+
+    const delay =
+      Math.random() * (customConfig.maxDelay - customConfig.minDelay) +
+      customConfig.minDelay;
 
     switch (protocol) {
-      case "mute": {
-        for (const privateKey of privateKeys) {
-          await muteTrade(
-            privateKey,
-            Number(percentageOfBalanceForSwap),
-            inToken,
-            outToken
+      case "mute":
+      case "syncswap": {
+        for (const privateKey of selectedKeys) {
+          const selectedInToken = inTokens.find(
+            (token) => token.address === Object.keys(balances[privateKey])[0]
           );
+
+          if (!selectedInToken) {
+            console.error("selectedInToken not found");
+            continue;
+          }
+
+          const selectedOutToken = selectRandomArrayElements(outTokens, 1)[0];
+
+          if (protocol === "mute") {
+            await muteTrade(
+              privateKey,
+              Number(percentageOfBalanceForSwap),
+              selectedInToken,
+              selectedOutToken
+            );
+          } else if (protocol === "syncswap") {
+            await syncswapTrade(
+              privateKey,
+              Number(percentageOfBalanceForSwap),
+              selectedInToken,
+              selectedOutToken,
+              Number(poolType)
+            );
+          }
+
+          if (selectedKeys.indexOf(privateKey) === selectedKeys.length - 1) {
+            break;
+          }
 
           console.log("Delay before next trade: ", delay);
           new Promise((resolve) => setTimeout(resolve, delay));
-        }
-        break;
-      }
-      case "syncswap": {
-        for (const privateKey of privateKeys) {
-          await syncswapTrade(
-            privateKey,
-            Number(percentageOfBalanceForSwap),
-            inToken,
-            outToken,
-            Number(poolType)
-          );
-
-          console.log("Delay before next trade: ", delay);
-          await new Promise((resolve) => setTimeout(resolve, delay));
         }
         break;
       }

@@ -1,10 +1,13 @@
-import { ethers, Contract, AbiCoder } from "ethers";
+import { ethers, AbiCoder, JsonRpcProvider } from "ethers";
 import { Token } from "../../../constants/tokens";
-import RouterContractAbi from "../../../abis/syncswap/ROUTER_ABI.json";
-import Erc20Abi from "../../../abis/ERC20_ABI.json";
-import StablePoolFactoryAbi from "../../../abis/syncswap/STABLE_POOL_FACTORY_ABI.json";
-import PoolAbi from "../../../abis/syncswap/POOL_ABI.json";
 import { networks } from "../../../constants/networks";
+import {
+  ERC20_ABI__factory,
+  POOL_ABI__factory,
+  STABLE_POOL_FACTORY_ABI__factory,
+} from "../../../abis/types";
+import { ROUTER_ABI__factory } from "../../../abis/types/factories/syncswap";
+import { calculateGasMargin } from "../../../utils/calculateGasMargin";
 
 export enum PoolType {
   Stable = 0,
@@ -20,30 +23,34 @@ export const syncswapTrade = async (
 ): Promise<void> => {
   const {
     url,
-    syncswapRouter,
+    syncswapRouterAddress,
     wethAddress,
-    syncswapClassicPoolFactory,
-    syncswapStablePoolFactory,
+    syncswapClassicPoolFactoryAddress,
+    syncswapStablePoolFactoryAddress,
   } = networks["zkSync Era Mainnet"];
 
-  const provider: ethers.JsonRpcProvider = new ethers.JsonRpcProvider(url);
+  const provider = new JsonRpcProvider(url);
 
-  const wallet: ethers.Wallet = new ethers.Wallet(privateKey, provider);
+  try {
+    await provider._detectNetwork();
+  } catch (err) {
+    console.log(err);
+  }
+
+  const wallet = new ethers.Wallet(privateKey, provider);
 
   console.log(`STARTING TRADE FOR ADDRESS: ${wallet.address}`);
 
   const isNativeTokenIn = inToken.symbol === "ETH";
   const isNativeTokenOut = outToken.symbol === "ETH";
 
-  const syncswapRouterContract: ethers.Contract = new ethers.Contract(
-    syncswapRouter,
-    RouterContractAbi,
+  const syncswapRouterContract = ROUTER_ABI__factory.connect(
+    syncswapRouterAddress,
     wallet
   );
 
-  const fromTokenContract: ethers.Contract = new ethers.Contract(
+  const fromTokenContract = ERC20_ABI__factory.connect(
     isNativeTokenIn ? wethAddress : inToken.address,
-    Erc20Abi,
     wallet
   );
 
@@ -51,12 +58,13 @@ export const syncswapTrade = async (
     ? await provider.getBalance(wallet.address)
     : await fromTokenContract.balanceOf(wallet.address);
 
-  const inAmount = balance * BigInt(percentageOfWalletBallance) / BigInt(100);
+  const inAmount = (balance * BigInt(percentageOfWalletBallance)) / BigInt(100);
 
-  const poolFactoryContract: ethers.Contract = new ethers.Contract(
-    poolType ? syncswapClassicPoolFactory : syncswapStablePoolFactory,
-    StablePoolFactoryAbi,
-    provider
+  const poolFactoryContract = STABLE_POOL_FACTORY_ABI__factory.connect(
+    poolType
+      ? syncswapClassicPoolFactoryAddress
+      : syncswapStablePoolFactoryAddress,
+    wallet
   );
 
   const lpTokenAddress = await poolFactoryContract.getPool(
@@ -64,8 +72,8 @@ export const syncswapTrade = async (
     isNativeTokenOut ? wethAddress : outToken.address
   );
 
-  const pool: Contract = new Contract(lpTokenAddress, PoolAbi, provider);
-  const reserves: [bigint, bigint] = await pool.getReserves();
+  const pool = POOL_ABI__factory.connect(lpTokenAddress, wallet);
+  const reserves = await pool.getReserves();
   const [reserveInToken, reserveOutToken] =
     (isNativeTokenIn ? wethAddress : inToken.address) <
     (isNativeTokenOut ? wethAddress : outToken.address)
@@ -84,11 +92,14 @@ export const syncswapTrade = async (
     syncswapRouterContract
   );
 
-  if (allowance.lt(inAmount) && !isNativeTokenIn) {
+  if (allowance < inAmount && !isNativeTokenIn) {
     const approveTx = await fromTokenContract.approve(
       syncswapRouterContract,
       ethers.MaxUint256
     );
+
+    // Thorows an error if you don't wait
+    await new Promise((res) => setTimeout(() => res(true), 15000));
 
     await approveTx.wait();
     console.log(
@@ -130,12 +141,24 @@ export const syncswapTrade = async (
     },
   ];
 
+  const deadline = BigInt(Math.floor(Date.now() / 1000)) + BigInt(1800);
+
+  const swapTxGasEstimate = await syncswapRouterContract.swap.estimateGas(
+    paths,
+    amountOutMin,
+    deadline,
+    {
+      value: isNativeTokenIn ? inAmount : 0,
+    }
+  );
+
   const swapTx = await syncswapRouterContract.swap(
     paths,
     amountOutMin,
-    BigInt(Math.floor(Date.now() / 1000)) + BigInt(1800),
+    deadline,
     {
       value: isNativeTokenIn ? inAmount : 0,
+      gasLimit: calculateGasMargin(swapTxGasEstimate),
     }
   );
 

@@ -1,5 +1,5 @@
 import { ethers } from "ethers";
-import WethAbi from "../../abis/WETH_ABI.json";
+import { WETH_ABI__factory } from "../../abis/types";
 
 export async function unWrap(
   privateKey: string,
@@ -12,11 +12,7 @@ export async function unWrap(
 
   const wallet: ethers.Wallet = new ethers.Wallet(privateKey, provider);
 
-  const wethContract: ethers.Contract = new ethers.Contract(
-    network.wethAddress,
-    WethAbi,
-    wallet
-  );
+  const wethContract = WETH_ABI__factory.connect(network.wethAddress, wallet);
 
   const balance = await wethContract.balanceOf(wallet.address);
 

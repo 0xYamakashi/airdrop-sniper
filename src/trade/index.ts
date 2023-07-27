@@ -28,8 +28,8 @@ async function main(): Promise<void> {
       "randomCount random number of accounts you want to interact with"
     )
     .option(
-      "--selectedPrivateKeyIndex <selectedPrivateKeyIndex>",
-      "Index of private key you want to use"
+      "--selectedWalletAddresses <selectedWalletAddresses>",
+      "Addresses of wallets you want to use"
     );
 
   program.parse(process.argv);
@@ -39,24 +39,17 @@ async function main(): Promise<void> {
     percentageOfBalanceForSwap,
     poolType,
     randomCount,
-    selectedPrivateKeyIndex,
+    selectedWalletAddresses,
   }: {
     protocol: "mute" | "syncswap";
     percentageOfBalanceForSwap: string;
     poolType: "0" | "1";
     randomCount: number;
-    selectedPrivateKeyIndex: number;
+    selectedWalletAddresses: string[];
   } = program.opts();
-
-  console.log(program.opts().inTokenSymbols, program.opts().outTokenSymbols);
 
   const inTokenSymbols: string[] = JSON.parse(program.opts().inTokenSymbols);
   const outTokenSymbols: string[] = JSON.parse(program.opts().outTokenSymbols);
-
-  console.log({
-    inTokenSymbols,
-    outTokenSymbols,
-  });
 
   if (customConfig.maxGasPrice < Number(getCurrentMainnetGasPrice())) {
     throw new Error("Gas price is too high!");
@@ -114,8 +107,6 @@ async function main(): Promise<void> {
 
     const selectedKeys = randomCount
       ? selectRandomArrayElements(eligiblePrivateKeys, randomCount)
-      : selectedPrivateKeyIndex
-      ? eligiblePrivateKeys[selectedPrivateKeyIndex]
       : eligiblePrivateKeys;
 
     const delay =
@@ -159,7 +150,7 @@ async function main(): Promise<void> {
           }
 
           console.log("Delay before next trade: ", delay);
-          new Promise((resolve) => setTimeout(resolve, delay));
+          await new Promise((resolve) => setTimeout(resolve, delay));
         }
         break;
       }

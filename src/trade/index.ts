@@ -3,7 +3,11 @@ import { findToken } from "../../utils/findToken";
 import { program } from "commander";
 import { muteTrade } from "./mute/mute";
 import { syncswapTrade } from "./syncSwap/syncSwap";
-import { inTokenOption, networkOption } from "../../utils/commanderOptions";
+import {
+  inTokenOption,
+  networkOption,
+  selectedWalletAddressesOption,
+} from "../../utils/commanderOptions";
 import customConfig from "../../config";
 import { getCurrentMainnetGasPrice } from "../../utils/getGasPrice";
 import { selectRandomArrayElements } from "../../utils/selectRandomArrayElements";
@@ -15,6 +19,7 @@ import {
 } from "../../constants/networks";
 import { ethers } from "ethers";
 import chalk from "chalk";
+import { filterPkByAddress } from "../../utils/filterPkByAddress";
 
 config();
 
@@ -31,14 +36,7 @@ async function main(): Promise<void> {
       "Specify a VALUE"
     )
     .requiredOption("--poolType <poolType>", "Beta")
-    .option(
-      "--randomCount <randomCount>",
-      "randomCount random number of accounts you want to interact with"
-    )
-    .option(
-      "--selectedWalletAddresses <selectedWalletAddresses>",
-      "Addresses of wallets you want to use"
-    );
+    .option(...selectedWalletAddressesOption);
 
   program.parse(process.argv);
 
@@ -95,13 +93,10 @@ async function main(): Promise<void> {
     let eligiblePrivateKeys = [...privateKeys];
 
     if (selectedWalletAddressesParsed) {
-      eligiblePrivateKeys = privateKeys.filter((privateKey) => {
-        return (
-          selectedWalletAddressesParsed.indexOf(
-            new ethers.Wallet(privateKey).address
-          ) !== -1
-        );
-      });
+      eligiblePrivateKeys = filterPkByAddress(
+        privateKeys,
+        selectedWalletAddressesParsed
+      );
     }
 
     let balances: {

@@ -111,4 +111,35 @@ export const tokens: { [key in NetworkNames]: Token[] } = {
       is_nft: false,
     },
   ],
+  optimism: [
+    {
+      id: 7,
+      address: "0x296F55F8Fb28E498B858d0BcDA06D955B2Cb3f97",
+      symbol: "STG",
+      decimals: 18,
+      kind: "ERC20",
+      is_nft: false,
+    },
+  ],
+  avax: [
+    {
+      id: 7,
+      address: "0x2F6F07CDcf3588944Bf4C42aC74ff24bF56e7590",
+      symbol: "STG",
+      decimals: 18,
+      kind: "ERC20",
+      is_nft: false,
+    },
+  ],
+  bnb: [],
+  polygon: [
+    {
+      id: 7,
+      address: "0x2F6F07CDcf3588944Bf4C42aC74ff24bF56e7590",
+      symbol: "STG",
+      decimals: 18,
+      kind: "ERC20",
+      is_nft: false,
+    },
+  ],
 };

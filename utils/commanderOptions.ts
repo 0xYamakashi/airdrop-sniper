@@ -10,3 +10,8 @@ export const inTokenOption = [
   "Specify a paying token",
   '["ETH"]',
 ] as const;
+
+export const selectedWalletAddressesOption = [
+  "--selectedWalletAddresses <selectedWalletAddresses>",
+  "Addresses of wallets you want to use",
+] as const;

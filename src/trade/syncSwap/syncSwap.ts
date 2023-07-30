@@ -20,10 +20,10 @@ export const syncswapTrade = async (
 ): Promise<void> => {
   const {
     url,
-    syncswapRouter,
+    syncswapRouterAddress,
     wethAddress,
-    syncswapClassicPoolFactory,
-    syncswapStablePoolFactory,
+    syncswapStablePoolFactoryAddress,
+    syncswapClassicPoolFactoryAddress,
   } = networks["zkSync Era Mainnet"];
 
   const provider: ethers.JsonRpcProvider = new ethers.JsonRpcProvider(url);
@@ -36,7 +36,7 @@ export const syncswapTrade = async (
   const isNativeTokenOut = outToken.symbol === "ETH";
 
   const syncswapRouterContract: ethers.Contract = new ethers.Contract(
-    syncswapRouter,
+    syncswapRouterAddress,
     RouterContractAbi,
     wallet
   );
@@ -51,10 +51,15 @@ export const syncswapTrade = async (
     ? await provider.getBalance(wallet.address)
     : await fromTokenContract.balanceOf(wallet.address);
 
-  const inAmount = balance * BigInt(percentageOfWalletBallance) / BigInt(100);
+  if (balance === BigInt(0)) {
+    console.log(`Tokens balance is zero for: ${wallet.address}`);
+    return;
+  }
+
+  const inAmount = (balance * BigInt(percentageOfWalletBallance)) / BigInt(100);
 
   const poolFactoryContract: ethers.Contract = new ethers.Contract(
-    poolType ? syncswapClassicPoolFactory : syncswapStablePoolFactory,
+    poolType ? syncswapClassicPoolFactoryAddress : syncswapStablePoolFactoryAddress,
     StablePoolFactoryAbi,
     provider
   );
@@ -84,7 +89,7 @@ export const syncswapTrade = async (
     syncswapRouterContract
   );
 
-  if (allowance.lt(inAmount) && !isNativeTokenIn) {
+  if (allowance < inAmount && !isNativeTokenIn) {
     const approveTx = await fromTokenContract.approve(
       syncswapRouterContract,
       ethers.MaxUint256

@@ -4,6 +4,7 @@ import { program } from "commander";
 import { muteTrade } from "./mute/mute";
 import { syncswapTrade } from "./syncSwap/syncSwap";
 import { MAX_DELAY, MIN_DELAY } from "../../constants";
+import { kyberswapTrade } from "./kyberSwap/kyberSwap";
 
 config();
 const privateKeys = (process.env.PRIVATE_KEYS || "").split(",");
@@ -18,7 +19,7 @@ async function main(): Promise<void> {
       "--percentageOfBalanceForSwap <percentageOfBalanceForSwap>",
       "Specify a VALUE"
     )
-    .requiredOption("--poolType <poolType>", "Beta");
+    .option("--poolType <poolType>", "Beta");
 
   program.parse(process.argv);
 
@@ -50,7 +51,7 @@ async function main(): Promise<void> {
           );
 
           console.log("Delay before next trade: ", delay);
-          new Promise((resolve) => setTimeout(resolve, delay));
+          await new Promise((resolve) => setTimeout(resolve, delay));
         }
         break;
       }
@@ -63,6 +64,20 @@ async function main(): Promise<void> {
             outToken,
             Number(poolType)
           );
+
+          console.log("Delay before next trade: ", delay);
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        }
+        break;
+      }
+      case "kyberswap": {
+        for (const privateKey of privateKeys) {
+          await kyberswapTrade(
+            privateKey,
+            Number(percentageOfBalanceForSwap),
+            inToken,
+            outToken
+          ).catch((err) => console.log(err));
 
           console.log("Delay before next trade: ", delay);
           await new Promise((resolve) => setTimeout(resolve, delay));

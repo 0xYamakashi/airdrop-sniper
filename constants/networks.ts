@@ -38,6 +38,7 @@ export const networks = {
     wethAddress: "0x5aea5775959fbc2557cc8789bc1bf90a239d9a91",
     layerzeroChainId: 165,
     layerzeroEndpointAddress: "0x9b896c0e23220469C7AE69cb4BbAE391eAa4C8da",
+    kyberswapRouterAddress: "0x937f4f2FF1889b79dAa08debfCA5C237a07A5208"
   },
   linea: {
     name: "linea",

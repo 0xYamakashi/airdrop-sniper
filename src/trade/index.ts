@@ -20,6 +20,7 @@ import {
 import { ethers } from "ethers";
 import chalk from "chalk";
 import { filterPkByAddress } from "../../utils/filterPkByAddress";
+import { kyberswapTrade } from "./kyberSwap/kyberSwap";
 
 config();
 
@@ -51,7 +52,7 @@ async function main(): Promise<void> {
     selectedWalletAddresses,
   }: {
     network?: NetworkNames;
-    protocol?: "mute" | "syncswap";
+    protocol?: "mute" | "syncswap" | "kyberswap";
     percentageOfBalanceForSwap?: string;
     poolType?: "0" | "1";
     randomCount?: string;
@@ -88,115 +89,112 @@ async function main(): Promise<void> {
     return token;
   });
 
-  try {
-    const privateKeys = (process.env.PRIVATE_KEYS || "").split(",");
-    let eligiblePrivateKeys = [...privateKeys];
+  const privateKeys = (process.env.PRIVATE_KEYS || "").split(",");
+  let eligiblePrivateKeys = [...privateKeys];
 
-    if (selectedWalletAddressesParsed) {
-      eligiblePrivateKeys = filterPkByAddress(
-        privateKeys,
-        selectedWalletAddressesParsed
+  if (selectedWalletAddressesParsed) {
+    eligiblePrivateKeys = filterPkByAddress(
+      privateKeys,
+      selectedWalletAddressesParsed
+    );
+  }
+
+  let balances: {
+    [privateKey: string]: {
+      [inTokenAddress: string]: bigint;
+    };
+  } = {};
+  for (const privateKey of privateKeys) {
+    for (const inToken of inTokens) {
+      const { balance } = await getTokenBalance(
+        privateKey,
+        inToken,
+        networks["zksync"]
+      );
+
+      balances = {
+        ...balances,
+        [privateKey]: { ...balances[privateKey], [inToken.address]: balance },
+      };
+    }
+  }
+
+  for (let privKey in balances) {
+    const value = balances[privKey];
+    inTokens.forEach((inToken) => {
+      if (value[inToken.address].valueOf() === BigInt(0)) {
+        delete balances[privKey][inToken.address];
+      }
+
+      if (Object.keys(balances[privKey]).length === 0) {
+        eligiblePrivateKeys.splice(eligiblePrivateKeys.indexOf(privKey), 1);
+      }
+    });
+  }
+
+  const selectedKeys = randomCount
+    ? selectRandomArrayElements(eligiblePrivateKeys, Number(randomCount))
+    : selectRandomArrayElements(
+        eligiblePrivateKeys,
+        eligiblePrivateKeys.length
+      );
+
+  const delay =
+    Math.random() * (customConfig.maxDelay - customConfig.minDelay) +
+    customConfig.minDelay;
+
+  for (const privateKey of selectedKeys) {
+    const selectedInToken = inTokens.find(
+      (token) => token.address === Object.keys(balances[privateKey])[0]
+    );
+
+    if (!selectedInToken) {
+      console.error("selectedInToken not found");
+      continue;
+    }
+
+    const selectedOutToken = selectRandomArrayElements(outTokens, 1)[0];
+
+    try {
+      if (protocol === "mute") {
+        await muteTrade(
+          privateKey,
+          Number(percentageOfBalanceForSwap),
+          selectedInToken,
+          selectedOutToken
+        );
+      } else if (protocol === "syncswap") {
+        await syncswapTrade(
+          privateKey,
+          Number(percentageOfBalanceForSwap),
+          selectedInToken,
+          selectedOutToken,
+          Number(poolType)
+        );
+      } else if (protocol === "kyberswap") {
+        await kyberswapTrade(
+          privateKey,
+          Number(percentageOfBalanceForSwap),
+          selectedInToken,
+          selectedOutToken
+        );
+      }
+    } catch (e) {
+      console.log(
+        chalk.red(`Error in ${protocol} trade for address: `) +
+          chalk.yellow(new ethers.Wallet(privateKey).address) +
+          "\n" +
+          e +
+          "\n"
       );
     }
 
-    let balances: {
-      [privateKey: string]: {
-        [inTokenAddress: string]: bigint;
-      };
-    } = {};
-    for (const privateKey of privateKeys) {
-      for (const inToken of inTokens) {
-        const { balance } = await getTokenBalance(
-          privateKey,
-          inToken,
-          networks["zksync"]
-        );
-
-        balances = {
-          ...balances,
-          [privateKey]: { ...balances[privateKey], [inToken.address]: balance },
-        };
-      }
+    if (selectedKeys.indexOf(privateKey) === selectedKeys.length - 1) {
+      break;
     }
 
-    for (let privKey in balances) {
-      const value = balances[privKey];
-      inTokens.forEach((inToken) => {
-        if (value[inToken.address].valueOf() === BigInt(0)) {
-          delete balances[privKey][inToken.address];
-        }
-
-        if (Object.keys(balances[privKey]).length === 0) {
-          eligiblePrivateKeys.splice(eligiblePrivateKeys.indexOf(privKey), 1);
-        }
-      });
-    }
-
-    const selectedKeys = randomCount
-      ? selectRandomArrayElements(eligiblePrivateKeys, Number(randomCount))
-      : selectRandomArrayElements(
-          eligiblePrivateKeys,
-          eligiblePrivateKeys.length
-        );
-
-    const delay =
-      Math.random() * (customConfig.maxDelay - customConfig.minDelay) +
-      customConfig.minDelay;
-
-    switch (protocol) {
-      case "mute":
-      case "syncswap": {
-        for (const privateKey of selectedKeys) {
-          const selectedInToken = inTokens.find(
-            (token) => token.address === Object.keys(balances[privateKey])[0]
-          );
-
-          if (!selectedInToken) {
-            console.error("selectedInToken not found");
-            continue;
-          }
-
-          const selectedOutToken = selectRandomArrayElements(outTokens, 1)[0];
-
-          try {
-            if (protocol === "mute") {
-              await muteTrade(
-                privateKey,
-                Number(percentageOfBalanceForSwap),
-                selectedInToken,
-                selectedOutToken
-              );
-            } else if (protocol === "syncswap") {
-              await syncswapTrade(
-                privateKey,
-                Number(percentageOfBalanceForSwap),
-                selectedInToken,
-                selectedOutToken,
-                Number(poolType)
-              );
-            }
-          } catch (e) {
-            console.log(
-              chalk.red(`Error in ${protocol} trade for address: `) +
-                chalk.yellow(new ethers.Wallet(privateKey).address) +
-                "\n" +
-                e +
-                "\n"
-            );
-          }
-
-          if (selectedKeys.indexOf(privateKey) === selectedKeys.length - 1) {
-            break;
-          }
-
-          console.log("Delay before next trade: ", delay);
-          await new Promise((resolve) => setTimeout(resolve, delay));
-        }
-        break;
-      }
-    }
-  } catch (e) {
-    console.error("Error", e);
+    console.log("Delay before next trade: ", delay);
+    await new Promise((resolve) => setTimeout(resolve, delay));
   }
 
   console.log(chalk.green("FINISHED!!!!!!!!!!!!"));

@@ -10,7 +10,7 @@ export const muteTrade = async (
   inToken: Token,
   outToken: Token
 ): Promise<void> => {
-  const { url, muteRouterAddress } = networks["zkSync Era Mainnet"];
+  const { url, muteRouterAddress } = networks["zksync"];
 
   if (
     (inToken.symbol !== "USDC" && inToken.symbol !== "USD+") ||

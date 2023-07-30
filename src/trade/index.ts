@@ -3,21 +3,32 @@ import { findToken } from "../../utils/findToken";
 import { program } from "commander";
 import { muteTrade } from "./mute/mute";
 import { syncswapTrade } from "./syncSwap/syncSwap";
-import { inTokenOption } from "../../utils/commanderOptions";
+import {
+  inTokenOption,
+  networkOption,
+  selectedWalletAddressesOption,
+} from "../../utils/commanderOptions";
 import customConfig from "../../config";
 import { getCurrentMainnetGasPrice } from "../../utils/getGasPrice";
 import { selectRandomArrayElements } from "../../utils/selectRandomArrayElements";
 import { getTokenBalance } from "../../utils/getTokenBalance";
-import { networks } from "../../constants/networks";
+import {
+  NetworkNames,
+  netowrksArray,
+  networks,
+} from "../../constants/networks";
 import { ethers } from "ethers";
 import chalk from "chalk";
+import { filterPkByAddress } from "../../utils/filterPkByAddress";
 
 config();
 
 async function main(): Promise<void> {
   program
     .description("A sample application to parse options")
+    .requiredOption(...networkOption)
     .requiredOption("--protocol <protocol>", "Specify a protocol")
+    .requiredOption("--network <protocol>", "Specify a protocol")
     .requiredOption(...inTokenOption)
     .requiredOption("--outTokenSymbols <outTokenSymbols>", "Alpha")
     .requiredOption(
@@ -25,19 +36,13 @@ async function main(): Promise<void> {
       "Specify a VALUE"
     )
     .requiredOption("--poolType <poolType>", "Beta")
-    .option(
-      "--randomCount <randomCount>",
-      "randomCount random number of accounts you want to interact with"
-    )
-    .option(
-      "--selectedWalletAddresses <selectedWalletAddresses>",
-      "Addresses of wallets you want to use"
-    );
+    .option(...selectedWalletAddressesOption);
 
   program.parse(process.argv);
 
   const {
     protocol,
+    network,
     percentageOfBalanceForSwap,
     poolType,
     randomCount,
@@ -45,6 +50,7 @@ async function main(): Promise<void> {
     outTokenSymbols,
     selectedWalletAddresses,
   }: {
+    network?: NetworkNames;
     protocol?: "mute" | "syncswap";
     percentageOfBalanceForSwap?: string;
     poolType?: "0" | "1";
@@ -63,18 +69,21 @@ async function main(): Promise<void> {
   const outTokenSymbolsParsed: string[] =
     outTokenSymbols && JSON.parse(outTokenSymbols);
 
+  if (!network || netowrksArray.indexOf(network) === -1)
+    throw new Error(chalk.red(`Network ${network} not supported`));
+
   if (customConfig.maxGasPrice < Number(getCurrentMainnetGasPrice())) {
     throw new Error("Gas price is too high!");
   }
 
   const inTokens = inTokenSymbolsParse.map((inTokenSymbol) => {
-    const token = findToken(inTokenSymbol);
+    const token = findToken(inTokenSymbol, network);
     if (!token) throw new Error("inToken not found");
     return token;
   });
 
   const outTokens = outTokenSymbolsParsed.map((outTokenSymbol) => {
-    const token = findToken(outTokenSymbol);
+    const token = findToken(outTokenSymbol, network);
     if (!token) throw new Error("outToken not found");
     return token;
   });
@@ -84,13 +93,10 @@ async function main(): Promise<void> {
     let eligiblePrivateKeys = [...privateKeys];
 
     if (selectedWalletAddressesParsed) {
-      eligiblePrivateKeys = privateKeys.filter((privateKey) => {
-        return (
-          selectedWalletAddressesParsed.indexOf(
-            new ethers.Wallet(privateKey).address
-          ) !== -1
-        );
-      });
+      eligiblePrivateKeys = filterPkByAddress(
+        privateKeys,
+        selectedWalletAddressesParsed
+      );
     }
 
     let balances: {
@@ -103,7 +109,7 @@ async function main(): Promise<void> {
         const { balance } = await getTokenBalance(
           privateKey,
           inToken,
-          networks["zkSync Era Mainnet"]
+          networks["zksync"]
         );
 
         balances = {

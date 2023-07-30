@@ -1,12 +1,12 @@
 import { ethers } from "ethers";
 import { Token } from "../constants/tokens";
 import { ERC20_ABI__factory } from "../abis/types";
-import { networks } from "../constants/networks";
+import { NetworkNames, networks } from "../constants/networks";
 
 export const getTokenBalance = async (
   privateKey: string,
   inToken: Token,
-  network: (typeof networks)["zkSync Era Mainnet" | "Ethereum Mainnet"]
+  network: (typeof networks)[NetworkNames]
 ): Promise<{ address: string; balance: bigint }> => {
   const provider: ethers.JsonRpcProvider = new ethers.JsonRpcProvider(
     network.url

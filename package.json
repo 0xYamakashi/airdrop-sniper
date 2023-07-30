@@ -9,7 +9,7 @@
     "balances": "ts-node ./src/balances/index.ts",
     "trade": "ts-node ./src/trade/index.ts",
     "wrap": "ts-node ./src/wrap/index.ts",
-    "neki": "ts-node ./utils/selectRandomArrayElements.ts"
+    "starkgate-bridge": "ts-node ./src/layerzero/index.ts"
   },
   "keywords": [],
   "author": "",

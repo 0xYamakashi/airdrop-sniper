@@ -35,7 +35,7 @@ async function main(): Promise<void> {
       "--percentageOfBalanceForSwap <percentageOfBalanceForSwap>",
       "Specify a VALUE"
     )
-    .requiredOption("--poolType <poolType>", "Beta")
+    .option("--poolType <poolType>", "Beta")
     .option(...selectedWalletAddressesOption);
 
   program.parse(process.argv);

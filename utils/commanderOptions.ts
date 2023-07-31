@@ -8,7 +8,6 @@ export const networkOption = [
 export const inTokenOption = [
   "--inTokenSymbols <inTokenSymbols>",
   "Specify a paying token",
-  '["ETH"]',
 ] as const;
 
 export const selectedWalletAddressesOption = [

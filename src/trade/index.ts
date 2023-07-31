@@ -40,7 +40,7 @@ async function main(): Promise<void> {
       "You can specify trade type: 'stables', 'ethereums', 'others'"
     )
     .option(...inTokenOption)
-    .option("--outTokenSymbols <outTokenSymbols>", "Alpha")
+    .option("--outTokenSymbol <outTokenSymbol>", "Alpha")
     .option(
       "--randomCount <randomCount>",
       "randomCount random number of accounts you want to interact with"
@@ -54,8 +54,8 @@ async function main(): Promise<void> {
     network,
     percentageOfBalanceForSwap,
     randomCount,
-    inTokenSymbols,
-    outTokenSymbols,
+    inTokenSymbol,
+    outTokenSymbol,
     selectedWalletAddresses,
     tradeType,
   }: {
@@ -63,8 +63,8 @@ async function main(): Promise<void> {
     protocol?: "mute" | "syncswap" | "kyberswap";
     percentageOfBalanceForSwap?: string;
     randomCount?: string;
-    inTokenSymbols?: string;
-    outTokenSymbols?: string;
+    inTokenSymbol?: string;
+    outTokenSymbol?: string;
     selectedWalletAddresses?: string;
     tradeType?: "stables" | "ethereums" | "others";
   } = program.opts();
@@ -77,15 +77,25 @@ async function main(): Promise<void> {
 
   const { stable, ethereum } = getTokensGroupedByCategory(network);
 
+  // tradeType is defined, but is neither "stables" nor "ethereums"
+  if (tradeType && tradeType !== "ethereums" && tradeType !== "stables") {
+    throw new Error(
+      chalk.red("Trade type must be either 'stables' or 'ethereums'")
+    );
+  }
+
+  // tradeType is not defined and there is no inTokenSymbol or outTokenSymbol
+  if (!tradeType && (!inTokenSymbol || !outTokenSymbol))
+    throw new Error(
+      chalk.red("You must specify inTokenSymbol and outTokenSymbol")
+    );
+
   const [inTokenSymbolsParsed, outTokenSymbolsParsed]: [string[], string[]] =
     tradeType === "stables"
       ? [stable, stable]
       : tradeType === "ethereums"
       ? [ethereum, ethereum]
-      : [
-          inTokenSymbols && JSON.parse(inTokenSymbols),
-          outTokenSymbols && JSON.parse(outTokenSymbols),
-        ];
+      : [[inTokenSymbol!], [outTokenSymbol!]];
 
   if (customConfig.maxGasPrice < Number(getCurrentMainnetGasPrice())) {
     throw new Error("Gas price is too high!");
@@ -170,8 +180,6 @@ async function main(): Promise<void> {
       console.error("selectedInToken not found");
       continue;
     }
-
-    // const selectedOutToken = selectRandomArrayElements(outTokens, 1)[0];
 
     const delay =
       Math.random() * (customConfig.maxDelay - customConfig.minDelay) +

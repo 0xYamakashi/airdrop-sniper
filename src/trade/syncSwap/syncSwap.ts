@@ -9,17 +9,11 @@ import {
 import { ROUTER_ABI__factory } from "../../../abis/types/factories/syncswap";
 import { calculateGasMargin } from "../../../utils/calculateGasMargin";
 
-// export enum PoolType {
-//   Stable = 0,
-//   Classic = 1,
-// }
-
 export const syncswapTrade = async (
   privateKey: string,
   percentageOfWalletBallance: number,
   inToken: Token,
   outToken: Token
-  // poolType: PoolType
 ): Promise<void> => {
   const {
     url,
@@ -174,7 +168,7 @@ export const syncswapTrade = async (
     deadline,
     {
       value: isNativeTokenIn ? inAmount : 0,
-      // gasLimit: calculateGasMargin(swapTxGasEstimate),
+      gasLimit: calculateGasMargin(swapTxGasEstimate),
     }
   );
 

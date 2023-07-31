@@ -2,7 +2,7 @@ import { program } from "commander";
 import { config } from "dotenv";
 import { wrap } from "./wrap";
 import { unWrap } from "./unWrap";
-import { inTokenOption } from "../../utils/commanderOptions";
+import { networkOption } from "../../utils/commanderOptions";
 import customConfig from "../../config";
 import { getCurrentMainnetGasPrice } from "../../utils/getGasPrice";
 import chalk from "chalk";
@@ -19,7 +19,7 @@ async function main(): Promise<void> {
   program
     .description("A sample application to parse options")
     .requiredOption("--option <option>", "Specify a VALUE")
-    .requiredOption(...inTokenOption)
+    .requiredOption(...networkOption)
     .requiredOption(
       "--percentageOfBalanceForSwap <percentageOfBalanceForSwap>",
       "Specify a VALUE"

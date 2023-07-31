@@ -23,14 +23,15 @@ async function main(): Promise<void> {
   }
 
   program.parse(process.argv);
-  const { network }: { network: NetworkNames } = program.opts();
+  const {
+    network,
+    inTokenSymbol,
+  }: { network: NetworkNames; inTokenSymbol: string } = program.opts();
 
   if (!network || netowrksArray.indexOf(network) === -1)
     throw new Error(chalk.red(`Network ${network} not supported`));
 
-  const inTokenSymbols: string[] = JSON.parse(program.opts().inTokenSymbols);
-
-  await getTokenBalances(inTokenSymbols, networks[network]);
+  await getTokenBalances([inTokenSymbol], networks[network]);
 }
 
 main();

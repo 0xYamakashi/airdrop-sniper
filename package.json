@@ -4,12 +4,12 @@
   "description": "",
   "main": "index.ts",
   "scripts": {
-    "codegen": "typechain --target ethers-v6 --out-dir ./abis/types/ './abis/**/*.json'",
+    "codegen": "rm -rf ./abis/types/ && typechain --target ethers-v6 --out-dir ./abis/types/ './abis/**/*.json'",
     "test": "echo \"Error: no test specified\" && exit 1",
     "balances": "ts-node ./src/balances/index.ts",
     "trade": "ts-node ./src/trade/index.ts",
     "wrap": "ts-node ./src/wrap/index.ts",
-    "starkgate-bridge": "ts-node ./src/layerzero/index.ts"
+    "layerzero-bridge": "ts-node ./src/layerzero/index.ts"
   },
   "keywords": [],
   "author": "",

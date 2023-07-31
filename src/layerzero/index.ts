@@ -1,5 +1,4 @@
 import { program } from "commander";
-import { Endpoint__factory, STGtoken__factory } from "../../abis/types";
 import {
   NetworkNames,
   netowrksArray,
@@ -7,9 +6,11 @@ import {
 } from "../../constants/networks";
 import chalk from "chalk";
 import { findToken } from "../../utils/findToken";
-import { JsonRpcProvider, Wallet, ZeroAddress, solidityPacked } from "ethers";
+import { JsonRpcProvider } from "ethers";
 import { config } from "dotenv";
-import { calculateGasMargin } from "../../utils/calculateGasMargin";
+import { selectedWalletAddressesOption } from "../../utils/commanderOptions";
+import { bridgeOmniToken } from "./omniTokenBridge";
+import customConfig from "../../config";
 
 config();
 async function main() {
@@ -31,11 +32,11 @@ async function main() {
     .requiredOption(
       "--percentageOfBalanceForSwap <percentageOfBalanceForSwap>",
       "Specify a VALUE"
-    );
-  // .option(...selectedWalletAddressesOption);
-  program.parse(process.argv);
+    )
+    .requiredOption(...selectedWalletAddressesOption);
 
-  const privateKey = (process.env.PRIVATE_KEYS || "").split(",")[3];
+  program.parse(process.argv);
+  const privateKeys = (process.env.PRIVATE_KEYS || "").split(",");
 
   const {
     originNetwork,
@@ -50,15 +51,6 @@ async function main() {
     selectedWalletAddresses: string[];
     percentageOfBalanceForSwap: string;
   } = program.opts();
-
-  console.log(
-    originNetwork,
-    destinationNetwork,
-    inTokenSymbol,
-    selectedWalletAddresses,
-    percentageOfBalanceForSwap,
-    "dadad"
-  );
 
   if (!originNetwork || netowrksArray.indexOf(originNetwork) === -1)
     throw new Error(
@@ -92,69 +84,99 @@ async function main() {
     console.log(err);
   }
 
-  const wallet = new Wallet(privateKey, provider);
+  for (const privateKey of privateKeys) {
+    const delay =
+      Math.random() * (customConfig.maxDelay - customConfig.minDelay) +
+      customConfig.minDelay;
 
-  const stgToken = STGtoken__factory.connect(inToken.address, wallet);
-  const endpoint = Endpoint__factory.connect(
-    parsedNetwork.layerzeroEndpointAddress,
-    wallet
-  );
+    await bridgeOmniToken({
+      parsedNetwork,
+      privateKey,
+      inTokenSymbol,
+      inToken,
+      provider,
+      destinationNetwork,
+      percentageOfBalanceForSwap: Number(percentageOfBalanceForSwap),
+    });
 
-  const balance = await stgToken.balanceOf(wallet.address);
+    if (privateKeys.indexOf(privateKey) === privateKeys.length - 1) {
+      break;
+    }
 
-  if (balance === BigInt(0)) {
-    throw new Error(chalk.red(`No balance for ${inTokenSymbol}`));
+    console.log("Delay before next trade: ", delay);
+    await new Promise((resolve) => setTimeout(resolve, delay));
   }
+  // const provider = new JsonRpcProvider(parsedNetwork.url);
 
-  const inAmount = (balance * BigInt(percentageOfBalanceForSwap)) / BigInt(100);
-  const adapterParam = solidityPacked(["uint16", "uint256"], [1, 85000]);
+  // try {
+  //   await provider._detectNetwork();
+  // } catch (err) {
+  //   console.log(err);
+  // }
 
-  const destinationNetworkLayerzeroChainId =
-    networks[destinationNetwork].layerzeroChainId;
+  // const wallet = new Wallet(privateKey, provider);
 
-  const fees = await endpoint
-    .estimateFees(
-      destinationNetworkLayerzeroChainId, // the destination LayerZero chainId
-      await stgToken.getAddress(), // your contract address that calls Endpoint.send()
-      "0x", // empty payload
-      false, // _payInZRO
-      "0x" // default '0x' adapterParams, see: Relayer Adapter Param docs
-    )
-    .catch((err) => {
-      console.log(chalk.red(err));
-    });
+  // const stgToken = STGtoken__factory.connect(inToken.address, wallet);
+  // const endpoint = Endpoint__factory.connect(
+  //   parsedNetwork.layerzeroEndpointAddress,
+  //   wallet
+  // );
 
-  const lzDestinationFee = fees?.[0];
+  // const balance = await stgToken.balanceOf(wallet.address);
 
-  if (!lzDestinationFee)
-    throw new Error(chalk.red("Not able to estimate fees"));
+  // if (balance === BigInt(0)) {
+  //   throw new Error(chalk.red(`No balance for ${inTokenSymbol}`));
+  // }
 
-  const sendTxGasEstimate = await stgToken.sendTokens.estimateGas(
-    destinationNetworkLayerzeroChainId, // send tokens to this chainId
-    wallet.address, // bytes calldata _to. where to deliver the tokens on the destination chain
-    inAmount, // uint256 _qty, // how many tokens to send
-    ZeroAddress, // address zroPaymentAddress, // ZRO payment address
-    adapterParam, // bytes calldata adapterParam // txParameters
-    { value: lzDestinationFee }
-  );
+  // const inAmount = (balance * BigInt(percentageOfBalanceForSwap)) / BigInt(100);
+  // const adapterParam = solidityPacked(["uint16", "uint256"], [1, 85000]);
 
-  // console.log(`fees[0] is the message fee in wei: ${fees[0].toString()}`);
+  // const destinationNetworkLayerzeroChainId =
+  //   networks[destinationNetwork].layerzeroChainId;
 
-  await stgToken
-    .sendTokens(
-      destinationNetworkLayerzeroChainId, // send tokens to this chainId
-      wallet.address, // bytes calldata _to. where to deliver the tokens on the destination chain
-      inAmount, // uint256 _qty, // how many tokens to send
-      ZeroAddress, // address zroPaymentAddress, // ZRO payment address
-      adapterParam, // bytes calldata adapterParam // txParameters
-      {
-        gasLimit: calculateGasMargin(sendTxGasEstimate),
-        value: lzDestinationFee,
-      }
-    )
-    .catch((err) => {
-      console.log(chalk.red(err));
-    });
+  // const fees = await endpoint
+  //   .estimateFees(
+  //     destinationNetworkLayerzeroChainId, // the destination LayerZero chainId
+  //     await stgToken.getAddress(), // your contract address that calls Endpoint.send()
+  //     "0x", // empty payload
+  //     false, // _payInZRO
+  //     "0x" // default '0x' adapterParams, see: Relayer Adapter Param docs
+  //   )
+  //   .catch((err) => {
+  //     console.log(chalk.red(err));
+  //   });
+
+  // const lzDestinationFee = fees?.[0];
+
+  // if (!lzDestinationFee)
+  //   throw new Error(chalk.red("Not able to estimate fees"));
+
+  // const sendTxGasEstimate = await stgToken.sendTokens.estimateGas(
+  //   destinationNetworkLayerzeroChainId, // send tokens to this chainId
+  //   wallet.address, // bytes calldata _to. where to deliver the tokens on the destination chain
+  //   inAmount, // uint256 _qty, // how many tokens to send
+  //   ZeroAddress, // address zroPaymentAddress, // ZRO payment address
+  //   adapterParam, // bytes calldata adapterParam // txParameters
+  //   { value: lzDestinationFee }
+  // );
+
+  // // console.log(`fees[0] is the message fee in wei: ${fees[0].toString()}`);
+
+  // await stgToken
+  //   .sendTokens(
+  //     destinationNetworkLayerzeroChainId, // send tokens to this chainId
+  //     wallet.address, // bytes calldata _to. where to deliver the tokens on the destination chain
+  //     inAmount, // uint256 _qty, // how many tokens to send
+  //     ZeroAddress, // address zroPaymentAddress, // ZRO payment address
+  //     adapterParam, // bytes calldata adapterParam // txParameters
+  //     {
+  //       gasLimit: calculateGasMargin(sendTxGasEstimate),
+  //       value: lzDestinationFee,
+  //     }
+  //   )
+  //   .catch((err) => {
+  //     console.log(chalk.red(err));
+  //   });
 }
 
 main();

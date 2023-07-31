@@ -8,6 +8,7 @@ export const netowrksArray = [
   "avax",
   "bnb",
   "polygon",
+  "aptos",
 ] as const;
 export type NetworkNames = (typeof netowrksArray)[number];
 
@@ -38,7 +39,7 @@ export const networks = {
     wethAddress: "0x5aea5775959fbc2557cc8789bc1bf90a239d9a91",
     layerzeroChainId: 165,
     layerzeroEndpointAddress: "0x9b896c0e23220469C7AE69cb4BbAE391eAa4C8da",
-    kyberswapRouterAddress: "0x937f4f2FF1889b79dAa08debfCA5C237a07A5208"
+    kyberswapRouterAddress: "0x937f4f2FF1889b79dAa08debfCA5C237a07A5208",
   },
   linea: {
     name: "linea",
@@ -80,5 +81,12 @@ export const networks = {
     url: "https://rpc-mainnet.maticvigil.com",
     layerzeroChainId: 109,
     layerzeroEndpointAddress: "0x3c2269811836af69497E5F486A85D7316753cf62",
+  },
+  aptos: {
+    name: "aptos",
+    url: "https://fullnode.mainnet.aptoslabs.com/v1",
+    layerzeroChainId: 108,
+    layerzeroEndpointAddress:
+      "0x54ad3d30af77b60d939ae356e6606de9a4da67583f02b962d2d3f2e481484e90",
   },
 } as const;

@@ -13,6 +13,8 @@ export * as factories from "./factories";
 export { ERC20_ABI__factory } from "./factories/ERC20_ABI__factory";
 export type { ROUTER_ABI } from "./mute/ROUTER_ABI";
 export { ROUTER_ABI__factory } from "./factories/mute/ROUTER_ABI__factory";
+export type { BTCb } from "./stargate/BTCb";
+export { BTCb__factory } from "./factories/stargate/BTCb__factory";
 export type { Endpoint } from "./stargate/Endpoint";
 export { Endpoint__factory } from "./factories/stargate/Endpoint__factory";
 export type { STGtoken } from "./stargate/STGtoken";

@@ -10,7 +10,6 @@ export async function getTokenBalances(
   const privateKeys = (process.env.PRIVATE_KEYS || "").split(",");
 
   const inTokens = inTokenSymbols.map((ts) => findToken(ts, network.name));
-  console.log(inTokens);
   for (const inToken of inTokens) {
     if (!inToken) {
       throw new Error("inToken not found");

@@ -1,5 +1,7 @@
 import { ethers } from "ethers";
-import { NetworkNames } from "./networks";
+import { NetworkNames, netowrksArray } from "./networks";
+
+type TokenCategory = "stable" | "ethereum" | "other" | "omnitoken";
 
 export type Token = {
   id: number;
@@ -8,7 +10,9 @@ export type Token = {
   decimals: number;
   kind: string;
   is_nft: boolean;
+  category: TokenCategory;
 };
+
 export const tokens: { [key in NetworkNames]: Token[] } = {
   zksync: [
     {
@@ -18,6 +22,7 @@ export const tokens: { [key in NetworkNames]: Token[] } = {
       decimals: 18,
       kind: "NATIVE",
       is_nft: false,
+      category: "ethereum",
     },
     {
       id: 1,
@@ -26,6 +31,7 @@ export const tokens: { [key in NetworkNames]: Token[] } = {
       decimals: 6,
       kind: "ERC20",
       is_nft: false,
+      category: "stable",
     },
     {
       id: 2,
@@ -34,6 +40,7 @@ export const tokens: { [key in NetworkNames]: Token[] } = {
       decimals: 6,
       kind: "ERC20",
       is_nft: false,
+      category: "stable",
     },
     {
       id: 3,
@@ -42,6 +49,7 @@ export const tokens: { [key in NetworkNames]: Token[] } = {
       decimals: 18,
       kind: "ERC20",
       is_nft: false,
+      category: "stable",
     },
     {
       id: 4,
@@ -50,6 +58,7 @@ export const tokens: { [key in NetworkNames]: Token[] } = {
       decimals: 6,
       kind: "ERC20",
       is_nft: false,
+      category: "stable",
     },
     {
       id: 5,
@@ -58,6 +67,7 @@ export const tokens: { [key in NetworkNames]: Token[] } = {
       decimals: 18,
       kind: "ERC20",
       is_nft: false,
+      category: "ethereum",
     },
     {
       id: 6,
@@ -66,6 +76,7 @@ export const tokens: { [key in NetworkNames]: Token[] } = {
       decimals: 18,
       kind: "ERC20",
       is_nft: false,
+      category: "ethereum",
     },
   ],
   mainnet: [],
@@ -77,6 +88,7 @@ export const tokens: { [key in NetworkNames]: Token[] } = {
       decimals: 18,
       kind: "NATIVE",
       is_nft: false,
+      category: "ethereum",
     },
     {
       id: 1,
@@ -85,6 +97,7 @@ export const tokens: { [key in NetworkNames]: Token[] } = {
       decimals: 6,
       kind: "ERC20",
       is_nft: false,
+      category: "stable",
     },
     {
       id: 2,
@@ -93,6 +106,7 @@ export const tokens: { [key in NetworkNames]: Token[] } = {
       decimals: 6,
       kind: "ERC20",
       is_nft: false,
+      category: "stable",
     },
     {
       id: 3,
@@ -101,6 +115,7 @@ export const tokens: { [key in NetworkNames]: Token[] } = {
       decimals: 18,
       kind: "ERC20",
       is_nft: false,
+      category: "stable",
     },
     {
       id: 5,
@@ -109,6 +124,16 @@ export const tokens: { [key in NetworkNames]: Token[] } = {
       decimals: 18,
       kind: "ERC20",
       is_nft: false,
+      category: "ethereum",
+    },
+    {
+      id: 8,
+      address: "0x2297aEbD383787A160DD0d9F71508148769342E3",
+      symbol: "BTC.b",
+      decimals: 18,
+      kind: "ERC20",
+      is_nft: false,
+      category: "omnitoken",
     },
   ],
   optimism: [
@@ -119,6 +144,16 @@ export const tokens: { [key in NetworkNames]: Token[] } = {
       decimals: 18,
       kind: "ERC20",
       is_nft: false,
+      category: "omnitoken",
+    },
+    {
+      id: 7,
+      address: "0x2297aEbD383787A160DD0d9F71508148769342E3",
+      symbol: "BTC.b",
+      decimals: 18,
+      kind: "ERC20",
+      is_nft: false,
+      category: "omnitoken",
     },
   ],
   avax: [
@@ -129,9 +164,29 @@ export const tokens: { [key in NetworkNames]: Token[] } = {
       decimals: 18,
       kind: "ERC20",
       is_nft: false,
+      category: "omnitoken",
+    },
+    {
+      id: 8,
+      address: "0x2297aEbD383787A160DD0d9F71508148769342E3",
+      symbol: "BTC.b",
+      decimals: 18,
+      kind: "ERC20",
+      is_nft: false,
+      category: "omnitoken",
     },
   ],
-  bnb: [],
+  bnb: [
+    {
+      id: 8,
+      address: "0x2297aEbD383787A160DD0d9F71508148769342E3",
+      symbol: "BTC.b",
+      decimals: 18,
+      kind: "ERC20",
+      is_nft: false,
+      category: "omnitoken",
+    },
+  ],
   polygon: [
     {
       id: 7,
@@ -140,6 +195,37 @@ export const tokens: { [key in NetworkNames]: Token[] } = {
       decimals: 18,
       kind: "ERC20",
       is_nft: false,
+      category: "omnitoken",
+    },
+    {
+      id: 7,
+      address: "0x2297aEbD383787A160DD0d9F71508148769342E3",
+      symbol: "BTC.b",
+      decimals: 18,
+      kind: "ERC20",
+      is_nft: false,
+      category: "omnitoken",
     },
   ],
+  aptos: [],
 };
+
+export function getTokensGroupedByCategory(network: NetworkNames) {
+  return tokens[network].reduce(
+    (acc, token) => {
+      acc[token.category].push(token.symbol);
+      return acc;
+    },
+    {
+      stable: [],
+      ethereum: [],
+      omnitoken: [],
+      other: [],
+    } as {
+      stable: string[];
+      ethereum: string[];
+      omnitoken: string[];
+      other: string[];
+    }
+  );
+}

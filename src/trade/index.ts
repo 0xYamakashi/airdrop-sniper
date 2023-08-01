@@ -21,6 +21,7 @@ import { ethers } from "ethers";
 import chalk from "chalk";
 import { filterPkByAddress } from "../../utils/filterPkByAddress";
 import { kyberswapTrade } from "./kyberSwap/kyberSwap";
+import { getTokensGroupedByCategory } from "../../constants/tokens";
 
 config();
 
@@ -30,13 +31,20 @@ async function main(): Promise<void> {
     .requiredOption(...networkOption)
     .requiredOption("--protocol <protocol>", "Specify a protocol")
     .requiredOption("--network <protocol>", "Specify a protocol")
-    .requiredOption(...inTokenOption)
-    .requiredOption("--outTokenSymbols <outTokenSymbols>", "Alpha")
     .requiredOption(
       "--percentageOfBalanceForSwap <percentageOfBalanceForSwap>",
       "Specify a VALUE"
     )
-    .option("--poolType <poolType>", "Beta")
+    .option(
+      "--tradeType <tradeType>",
+      "You can specify trade type: 'stables', 'ethereums', 'others'"
+    )
+    .option(...inTokenOption)
+    .option("--outTokenSymbol <outTokenSymbol>", "Alpha")
+    .option(
+      "--randomCount <randomCount>",
+      "randomCount random number of accounts you want to interact with"
+    )
     .option(...selectedWalletAddressesOption);
 
   program.parse(process.argv);
@@ -45,39 +53,55 @@ async function main(): Promise<void> {
     protocol,
     network,
     percentageOfBalanceForSwap,
-    poolType,
     randomCount,
-    inTokenSymbols,
-    outTokenSymbols,
+    inTokenSymbol,
+    outTokenSymbol,
     selectedWalletAddresses,
+    tradeType,
   }: {
     network?: NetworkNames;
     protocol?: "mute" | "syncswap" | "kyberswap";
     percentageOfBalanceForSwap?: string;
-    poolType?: "0" | "1";
     randomCount?: string;
-    inTokenSymbols?: string;
-    outTokenSymbols?: string;
+    inTokenSymbol?: string;
+    outTokenSymbol?: string;
     selectedWalletAddresses?: string;
+    tradeType?: "stables" | "ethereums" | "others";
   } = program.opts();
+
+  if (!network || netowrksArray.indexOf(network) === -1)
+    throw new Error(chalk.red(`Network ${network} not supported`));
 
   const selectedWalletAddressesParsed: string[] =
     selectedWalletAddresses && JSON.parse(selectedWalletAddresses);
 
-  const inTokenSymbolsParse: string[] =
-    inTokenSymbols && JSON.parse(inTokenSymbols);
+  const { stable, ethereum } = getTokensGroupedByCategory(network);
 
-  const outTokenSymbolsParsed: string[] =
-    outTokenSymbols && JSON.parse(outTokenSymbols);
+  // tradeType is defined, but is neither "stables" nor "ethereums"
+  if (tradeType && tradeType !== "ethereums" && tradeType !== "stables") {
+    throw new Error(
+      chalk.red("Trade type must be either 'stables' or 'ethereums'")
+    );
+  }
 
-  if (!network || netowrksArray.indexOf(network) === -1)
-    throw new Error(chalk.red(`Network ${network} not supported`));
+  // tradeType is not defined and there is no inTokenSymbol or outTokenSymbol
+  if (!tradeType && (!inTokenSymbol || !outTokenSymbol))
+    throw new Error(
+      chalk.red("You must specify inTokenSymbol and outTokenSymbol")
+    );
+
+  const [inTokenSymbolsParsed, outTokenSymbolsParsed]: [string[], string[]] =
+    tradeType === "stables"
+      ? [stable, stable]
+      : tradeType === "ethereums"
+      ? [ethereum, ethereum]
+      : [[inTokenSymbol!], [outTokenSymbol!]];
 
   if (customConfig.maxGasPrice < Number(getCurrentMainnetGasPrice())) {
     throw new Error("Gas price is too high!");
   }
 
-  const inTokens = inTokenSymbolsParse.map((inTokenSymbol) => {
+  const inTokens = inTokenSymbolsParsed.map((inTokenSymbol) => {
     const token = findToken(inTokenSymbol, network);
     if (!token) throw new Error("inToken not found");
     return token;
@@ -99,11 +123,12 @@ async function main(): Promise<void> {
     );
   }
 
-  let balances: {
+  let balancesByPk: {
     [privateKey: string]: {
       [inTokenAddress: string]: bigint;
     };
   } = {};
+
   for (const privateKey of privateKeys) {
     for (const inToken of inTokens) {
       const { balance } = await getTokenBalance(
@@ -112,24 +137,31 @@ async function main(): Promise<void> {
         networks["zksync"]
       );
 
-      balances = {
-        ...balances,
-        [privateKey]: { ...balances[privateKey], [inToken.address]: balance },
-      };
+      if (balance > BigInt(0)) {
+        balancesByPk = {
+          ...balancesByPk,
+          [privateKey]: {
+            ...balancesByPk[privateKey],
+            [inToken.address]: balance,
+          },
+        };
+      }
+
+      if (selectedWalletAddressesParsed) {
+        eligiblePrivateKeys = privateKeys.filter((privateKey) => {
+          return (
+            selectedWalletAddressesParsed.indexOf(
+              new ethers.Wallet(privateKey).address
+            ) !== -1
+          );
+        });
+      }
     }
   }
 
-  for (let privKey in balances) {
-    const value = balances[privKey];
-    inTokens.forEach((inToken) => {
-      if (value[inToken.address].valueOf() === BigInt(0)) {
-        delete balances[privKey][inToken.address];
-      }
-
-      if (Object.keys(balances[privKey]).length === 0) {
-        eligiblePrivateKeys.splice(eligiblePrivateKeys.indexOf(privKey), 1);
-      }
-    });
+  for (let privKey in balancesByPk) {
+    if (Object.keys(balancesByPk[privKey]).length === 0)
+      eligiblePrivateKeys.splice(eligiblePrivateKeys.indexOf(privKey), 1);
   }
 
   const selectedKeys = randomCount
@@ -139,13 +171,9 @@ async function main(): Promise<void> {
         eligiblePrivateKeys.length
       );
 
-  const delay =
-    Math.random() * (customConfig.maxDelay - customConfig.minDelay) +
-    customConfig.minDelay;
-
   for (const privateKey of selectedKeys) {
     const selectedInToken = inTokens.find(
-      (token) => token.address === Object.keys(balances[privateKey])[0]
+      (token) => token.address === Object.keys(balancesByPk[privateKey])[0]
     );
 
     if (!selectedInToken) {
@@ -153,48 +181,77 @@ async function main(): Promise<void> {
       continue;
     }
 
-    const selectedOutToken = selectRandomArrayElements(outTokens, 1)[0];
+    const delay =
+      Math.random() * (customConfig.maxDelay - customConfig.minDelay) +
+      customConfig.minDelay;
 
-    try {
-      if (protocol === "mute") {
-        await muteTrade(
-          privateKey,
-          Number(percentageOfBalanceForSwap),
-          selectedInToken,
-          selectedOutToken
-        );
-      } else if (protocol === "syncswap") {
-        await syncswapTrade(
-          privateKey,
-          Number(percentageOfBalanceForSwap),
-          selectedInToken,
-          selectedOutToken,
-          Number(poolType)
-        );
-      } else if (protocol === "kyberswap") {
-        await kyberswapTrade(
-          privateKey,
-          Number(percentageOfBalanceForSwap),
-          selectedInToken,
-          selectedOutToken
+    for (const privateKey of selectedKeys) {
+      const availableInToken = selectRandomArrayElements(
+        Object.keys(balancesByPk[privateKey]),
+        1
+      )[0];
+
+      const selectedInToken = inTokens.find(
+        (token) => token.address === availableInToken
+      );
+
+      if (!selectedInToken) {
+        console.error("selectedInToken not found");
+        continue;
+      }
+
+      const selectedOutToken = selectRandomArrayElements(
+        outTokens.filter((t) => t.address !== selectedInToken.address),
+        1
+      )[0];
+
+      try {
+        if (protocol === "mute") {
+          await muteTrade(
+            privateKey,
+            Number(percentageOfBalanceForSwap),
+            selectedInToken,
+            selectedOutToken
+          );
+        } else if (protocol === "syncswap") {
+          await syncswapTrade(
+            privateKey,
+            Number(percentageOfBalanceForSwap),
+            selectedInToken,
+            selectedOutToken
+          );
+        } else if (protocol === "kyberswap") {
+          await kyberswapTrade(
+            privateKey,
+            Number(percentageOfBalanceForSwap),
+            selectedInToken,
+            selectedOutToken
+          );
+        }
+
+        if (selectedKeys.indexOf(privateKey) === selectedKeys.length - 1) {
+          break;
+        }
+
+        console.log("Delay before next trade: ", delay);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      } catch (e) {
+        console.log(
+          chalk.red(`Error in ${protocol} trade for address: `) +
+            chalk.yellow(new ethers.Wallet(privateKey).address) +
+            "\n" +
+            e +
+            "\n"
         );
       }
-    } catch (e) {
-      console.log(
-        chalk.red(`Error in ${protocol} trade for address: `) +
-          chalk.yellow(new ethers.Wallet(privateKey).address) +
-          "\n" +
-          e +
-          "\n"
-      );
-    }
 
-    if (selectedKeys.indexOf(privateKey) === selectedKeys.length - 1) {
-      break;
-    }
+      if (selectedKeys.indexOf(privateKey) === selectedKeys.length - 1) {
+        break;
+      }
 
-    console.log("Delay before next trade: ", delay);
-    await new Promise((resolve) => setTimeout(resolve, delay));
+      console.log("Delay before next trade: ", delay);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
   }
 
   console.log(chalk.green("FINISHED!!!!!!!!!!!!"));

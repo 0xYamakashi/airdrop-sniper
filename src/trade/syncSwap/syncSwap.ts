@@ -1,5 +1,5 @@
 import { ethers, AbiCoder, JsonRpcProvider } from "ethers";
-import { Token } from "../../../constants/tokens";
+import { Token, tokens } from "../../../constants/tokens";
 import { networks } from "../../../constants/networks";
 import {
   ERC20_ABI__factory,
@@ -9,17 +9,11 @@ import {
 import { ROUTER_ABI__factory } from "../../../abis/types/factories/syncswap";
 import { calculateGasMargin } from "../../../utils/calculateGasMargin";
 
-export enum PoolType {
-  Stable = 0,
-  Classic = 1,
-}
-
 export const syncswapTrade = async (
   privateKey: string,
   percentageOfWalletBallance: number,
   inToken: Token,
-  outToken: Token,
-  poolType: PoolType
+  outToken: Token
 ): Promise<void> => {
   const {
     url,
@@ -39,7 +33,9 @@ export const syncswapTrade = async (
 
   const wallet = new ethers.Wallet(privateKey, provider);
 
-  console.log(`STARTING TRADE FOR ADDRESS: ${wallet.address}`);
+  console.log(
+    `STARTING TRADE FOR ADDRESS: ${wallet.address} from token ${inToken.symbol} to token ${outToken.symbol} for ${percentageOfWalletBallance}% of wallet balance`
+  );
 
   const isNativeTokenIn = inToken.symbol === "ETH";
   const isNativeTokenOut = outToken.symbol === "ETH";
@@ -60,10 +56,13 @@ export const syncswapTrade = async (
 
   const inAmount = (balance * BigInt(percentageOfWalletBallance)) / BigInt(100);
 
+  const isStablePair =
+    inToken.category === "stable" && outToken.category === "stable";
+
   const poolFactoryContract = STABLE_POOL_FACTORY_ABI__factory.connect(
-    poolType
-      ? syncswapClassicPoolFactoryAddress
-      : syncswapStablePoolFactoryAddress,
+    isStablePair
+      ? syncswapStablePoolFactoryAddress
+      : syncswapClassicPoolFactoryAddress,
     wallet
   );
 
@@ -71,6 +70,8 @@ export const syncswapTrade = async (
     isNativeTokenIn ? wethAddress : inToken.address,
     isNativeTokenOut ? wethAddress : outToken.address
   );
+
+  console.log(`LP Token Address: ${lpTokenAddress}`);
 
   const pool = POOL_ABI__factory.connect(lpTokenAddress, wallet);
   const reserves = await pool.getReserves();
@@ -82,10 +83,11 @@ export const syncswapTrade = async (
 
   const slippageRate = 99;
 
-  const amountOutMin =
-    (((reserveOutToken * BigInt(inAmount)) / BigInt(reserveInToken)) *
-      BigInt(slippageRate)) /
-    BigInt(100);
+  const amountOutMin = isStablePair
+    ? (BigInt(inAmount) * BigInt(99)) / BigInt(100)
+    : (((reserveOutToken * BigInt(inAmount)) / BigInt(reserveInToken)) *
+        BigInt(slippageRate)) /
+      BigInt(100);
 
   const allowance = await fromTokenContract.allowance(
     wallet.address,
@@ -153,6 +155,12 @@ export const syncswapTrade = async (
       value: isNativeTokenIn ? inAmount : 0,
     }
   );
+
+  await new Promise((res) =>
+    setTimeout(() => res(true), 15000 * Math.random())
+  );
+
+  console.log(`Swap tx gas estimate: ${swapTxGasEstimate.toString()}`);
 
   const swapTx = await syncswapRouterContract.swap(
     paths,

@@ -181,11 +181,10 @@ async function main(): Promise<void> {
       continue;
     }
 
-    const delay =
-      Math.random() * (customConfig.maxDelay - customConfig.minDelay) +
-      customConfig.minDelay;
-
     for (const privateKey of selectedKeys) {
+      const delay =
+        Math.random() * (customConfig.maxDelay - customConfig.minDelay) +
+        customConfig.minDelay;
       const availableInToken = selectRandomArrayElements(
         Object.keys(balancesByPk[privateKey]),
         1

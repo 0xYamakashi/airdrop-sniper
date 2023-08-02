@@ -34,12 +34,12 @@ To execute a trade of a specific token to another on a specified protocol, you c
 #### Options:
 
 - `--protocol=<protocol>`: (**Required**) Specify the protocol to use for the trade. The protocol should be passed as a string, for example `syncswap` or `mute`.
-- `--inTokenSymbol=<token>`: (**Required**) Specify the token you want to trade from. The token should be passed as a symbol, for example `USDT`.
-- `--outTokenSymbol=<token>`: (**Required**) Specify the token you want to trade to. The token should be passed as a symbol, for example `USDC`.
+- `--inTokenSymbol=<token>`: (**Optional**) Specify the token you want to trade from. The token should be passed as a symbol, for example `USDT`.
+- `--outTokenSymbol=<token>`: (**Optional**) Specify the token you want to trade to. The token should be passed as a symbol, for example `USDC`.
 - `--percentageOfBalanceForSwap=<percentage>`: (**Required**) Specify the percentage of the balance of the in-token that should be swapped. The percentage should be passed as a number between 0 and 100, for example `100`.
-
-- `--poolType` : (**Required**) Specify the pool type. It could be `0` for stable and `1` for classic.
+- `--tradeType=<"stables" | "ethereums" | "others">` : (**Optional**) Specify the trade type. If u use stables or ethereums u dont need to use inTokenSymbol and outTokenSymbol.
+- `--network=<"zksync" | "linea">` : (**Required**) Specify the network.
 
 #### Example:
 
-`yarn trade --protocol=syncswap --inTokenSymbols='["USDC","ETH"]' --outTokenSymbols='["USDT"]' --percentageOfBalanceForSwap=40 --poolType=1`
+`yarn trade --protocol=syncswap --percentageOfBalanceForSwap=100 --tradeType=stables --network=zksync`

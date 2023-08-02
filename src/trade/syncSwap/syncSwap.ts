@@ -1,5 +1,5 @@
-import { ethers, AbiCoder, JsonRpcProvider } from "ethers";
-import { Token, tokens } from "../../../constants/tokens";
+import { ethers, AbiCoder, Wallet } from "ethers";
+import { Token } from "../../../constants/tokens";
 import { networks } from "../../../constants/networks";
 import {
   ERC20_ABI__factory,
@@ -8,33 +8,28 @@ import {
 } from "../../../abis/types";
 import { ROUTER_ABI__factory } from "../../../abis/types/factories/syncswap";
 import { calculateGasMargin } from "../../../utils/calculateGasMargin";
+import chalk from "chalk";
 
 export const syncswapTrade = async (
-  privateKey: string,
-  percentageOfWalletBallance: number,
+  percentageOfWalletBalance: number,
   inToken: Token,
-  outToken: Token
+  outToken: Token,
+  network: (typeof networks)["zksync"],
+  wallet: Wallet
 ): Promise<void> => {
   const {
-    url,
     syncswapRouterAddress,
     wethAddress,
     syncswapClassicPoolFactoryAddress,
     syncswapStablePoolFactoryAddress,
-  } = networks["zksync"];
-
-  const provider = new JsonRpcProvider(url);
-
-  try {
-    await provider._detectNetwork();
-  } catch (err) {
-    console.log(err);
-  }
-
-  const wallet = new ethers.Wallet(privateKey, provider);
+  } = network;
 
   console.log(
-    `STARTING TRADE FOR ADDRESS: ${wallet.address} from token ${inToken.symbol} to token ${outToken.symbol} for ${percentageOfWalletBallance}% of wallet balance`
+    `STARTING TRADE ON ${chalk.green("SYNCSWAP")} FOR ADDRESS: ${
+      wallet.address
+    } from token ${inToken.symbol} to token ${
+      outToken.symbol
+    } for ${percentageOfWalletBalance}% of wallet balance`
   );
 
   const isNativeTokenIn = inToken.symbol === "ETH";
@@ -51,10 +46,10 @@ export const syncswapTrade = async (
   );
 
   const balance = isNativeTokenIn
-    ? await provider.getBalance(wallet.address)
+    ? await wallet.provider!.getBalance(wallet.address)
     : await fromTokenContract.balanceOf(wallet.address);
 
-  const inAmount = (balance * BigInt(percentageOfWalletBallance)) / BigInt(100);
+  const inAmount = (balance * BigInt(percentageOfWalletBalance)) / BigInt(100);
 
   const isStablePair =
     inToken.category === "stable" && outToken.category === "stable";

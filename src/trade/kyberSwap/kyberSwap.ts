@@ -1,28 +1,26 @@
 import axios from "axios";
-import { ethers } from "ethers";
+import { JsonRpcProvider, Wallet, ethers } from "ethers";
 import Erc20Abi from "../../../abis/ERC20_ABI.json";
 import { networks } from "../../../constants/networks";
 import { Token } from "../../../constants/tokens";
+import chalk from "chalk";
 
 export const kyberswapTrade = async (
-  privateKey: string,
   percentageOfWalletBalance: number,
   inToken: Token,
-  outToken: Token
+  outToken: Token,
+  network: (typeof networks)["zksync"],
+  wallet: Wallet
 ): Promise<void> => {
-  const { url, kyberswapRouterAddress, wethAddress, name } = networks["zksync"];
+  const { kyberswapRouterAddress, wethAddress, name } = network;
 
-  const provider = new ethers.JsonRpcProvider(url);
-
-  try {
-    await provider._detectNetwork();
-  } catch (err) {
-    console.log(err);
-  }
-
-  const wallet = new ethers.Wallet(privateKey, provider);
-
-  console.log(`Starting trade for address: ${wallet.address}`);
+  console.log(
+    `STARTING TRADE ON ${chalk.green("KYBERSWAP")} FOR ADDRESS: ${
+      wallet.address
+    } from token ${inToken.symbol} to token ${
+      outToken.symbol
+    } for ${percentageOfWalletBalance}% of wallet balance`
+  );
 
   const isNativeTokenIn = inToken.symbol === "ETH";
 
@@ -33,7 +31,7 @@ export const kyberswapTrade = async (
   );
 
   const balance = isNativeTokenIn
-    ? await provider.getBalance(wallet.address)
+    ? await wallet.provider!.getBalance(wallet.address)
     : await fromTokenContract.balanceOf(wallet.address);
 
   if (balance === BigInt(0)) {

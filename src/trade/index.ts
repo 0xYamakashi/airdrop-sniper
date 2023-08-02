@@ -51,7 +51,7 @@ async function main(): Promise<void> {
 
   const {
     protocol,
-    network,
+    network: networkName,
     percentageOfBalanceForSwap,
     randomCount,
     inTokenSymbol,
@@ -66,16 +66,18 @@ async function main(): Promise<void> {
     inTokenSymbol?: string;
     outTokenSymbol?: string;
     selectedWalletAddresses?: string;
-    tradeType?: "stables" | "ethereums" | "others";
+    tradeType?: "stables" | "ethereums" | "others" | "hop";
   } = program.opts();
 
-  if (!network || netowrksArray.indexOf(network) === -1)
-    throw new Error(chalk.red(`Network ${network} not supported`));
+  if (!networkName || netowrksArray.indexOf(networkName) === -1)
+    throw new Error(chalk.red(`Network ${networkName} not supported`));
+
+  const network = networks[networkName];
 
   const selectedWalletAddressesParsed: string[] =
     selectedWalletAddresses && JSON.parse(selectedWalletAddresses);
 
-  const { stable, ethereum } = getTokensGroupedByCategory(network);
+  const { stable, ethereum } = getTokensGroupedByCategory(networkName);
 
   // tradeType is defined, but is neither "stables" nor "ethereums"
   if (tradeType && tradeType !== "ethereums" && tradeType !== "stables") {
@@ -102,13 +104,13 @@ async function main(): Promise<void> {
   }
 
   const inTokens = inTokenSymbolsParsed.map((inTokenSymbol) => {
-    const token = findToken(inTokenSymbol, network);
+    const token = findToken(inTokenSymbol, networkName);
     if (!token) throw new Error("inToken not found");
     return token;
   });
 
   const outTokens = outTokenSymbolsParsed.map((outTokenSymbol) => {
-    const token = findToken(outTokenSymbol, network);
+    const token = findToken(outTokenSymbol, networkName);
     if (!token) throw new Error("outToken not found");
     return token;
   });
@@ -131,11 +133,7 @@ async function main(): Promise<void> {
 
   for (const privateKey of privateKeys) {
     for (const inToken of inTokens) {
-      const { balance } = await getTokenBalance(
-        privateKey,
-        inToken,
-        networks["zksync"]
-      );
+      const { balance } = await getTokenBalance(privateKey, inToken, network);
 
       if (balance > BigInt(0)) {
         balancesByPk = {
@@ -185,6 +183,7 @@ async function main(): Promise<void> {
       const delay =
         Math.random() * (customConfig.maxDelay - customConfig.minDelay) +
         customConfig.minDelay;
+
       const availableInToken = selectRandomArrayElements(
         Object.keys(balancesByPk[privateKey]),
         1
@@ -204,27 +203,46 @@ async function main(): Promise<void> {
         1
       )[0];
 
+      const provider = new ethers.JsonRpcProvider(network.url);
+
+      try {
+        await provider._detectNetwork();
+      } catch (err) {
+        console.log(err);
+      }
+
+      const wallet = new ethers.Wallet(privateKey, provider);
+
+      if (!wallet?.provider) {
+        throw new Error("Wallet provider not found");
+      }
+
+      console.log(`Starting trade for address: ${wallet.address}`);
+
       try {
         if (protocol === "mute") {
           await muteTrade(
-            privateKey,
             Number(percentageOfBalanceForSwap),
             selectedInToken,
-            selectedOutToken
+            selectedOutToken,
+            network as (typeof networks)["zksync"],
+            wallet
           );
         } else if (protocol === "syncswap") {
           await syncswapTrade(
-            privateKey,
             Number(percentageOfBalanceForSwap),
             selectedInToken,
-            selectedOutToken
+            selectedOutToken,
+            network as (typeof networks)["zksync"],
+            wallet
           );
         } else if (protocol === "kyberswap") {
           await kyberswapTrade(
-            privateKey,
             Number(percentageOfBalanceForSwap),
             selectedInToken,
-            selectedOutToken
+            selectedOutToken,
+            network as (typeof networks)["zksync"],
+            wallet
           );
         }
 

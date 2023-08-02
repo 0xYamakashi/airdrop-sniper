@@ -1,16 +1,18 @@
-import { ethers } from "ethers";
+import { Wallet, ethers } from "ethers";
 import { Token } from "../../../constants/tokens";
 import { networks } from "../../../constants/networks";
 import { ERC20_ABI__factory, ROUTER_ABI__factory } from "../../../abis/types";
 import { calculateGasMargin } from "../../../utils/calculateGasMargin";
+import chalk from "chalk";
 
 export const muteTrade = async (
-  privateKey: string,
   percentageOfWalletBalance: number,
   inToken: Token,
-  outToken: Token
+  outToken: Token,
+  network: (typeof networks)["zksync"],
+  wallet: Wallet
 ): Promise<void> => {
-  const { url, muteRouterAddress } = networks["zksync"];
+  const { muteRouterAddress } = network;
 
   if (
     (inToken.symbol !== "USDC" && inToken.symbol !== "USD+") ||
@@ -21,11 +23,13 @@ export const muteTrade = async (
     );
   }
 
-  const provider: ethers.JsonRpcProvider = new ethers.JsonRpcProvider(url);
-
-  const wallet: ethers.Wallet = new ethers.Wallet(privateKey, provider);
-
-  console.log(`STARTING TRADE FOR ADDRESS: ${wallet.address}`);
+  console.log(
+    `STARTING TRADE ON ${chalk.green("MUTE")} FOR ADDRESS: ${
+      wallet.address
+    } from token ${inToken.symbol} to token ${
+      outToken.symbol
+    } for ${percentageOfWalletBalance}% of wallet balance`
+  );
 
   const muteRouter = ROUTER_ABI__factory.connect(muteRouterAddress, wallet);
 

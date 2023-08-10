@@ -9,6 +9,7 @@ import {
 import { ROUTER_ABI__factory } from "../../../abis/types/factories/syncswap";
 import { calculateGasMargin } from "../../../utils/calculateGasMargin";
 import chalk from "chalk";
+import { adjustDecimals } from "../../../utils/adjustDecimals";
 
 export const syncswapTrade = async (
   percentageOfWalletBalance: number,
@@ -79,7 +80,11 @@ export const syncswapTrade = async (
   const slippageRate = 99;
 
   const amountOutMin = isStablePair
-    ? (BigInt(inAmount) * BigInt(99)) / BigInt(100)
+    ? adjustDecimals(
+        BigInt(inAmount) * BigInt(99),
+        inToken.decimals,
+        outToken.decimals
+      ) / BigInt(100)
     : (((reserveOutToken * BigInt(inAmount)) / BigInt(reserveInToken)) *
         BigInt(slippageRate)) /
       BigInt(100);

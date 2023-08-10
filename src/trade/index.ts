@@ -170,8 +170,17 @@ async function main(): Promise<void> {
       );
 
   for (const privateKey of selectedKeys) {
+    const delay =
+      Math.random() * (customConfig.maxDelay - customConfig.minDelay) +
+      customConfig.minDelay;
+
+    const availableInToken = selectRandomArrayElements(
+      Object.keys(balancesByPk[privateKey]),
+      1
+    )[0];
+
     const selectedInToken = inTokens.find(
-      (token) => token.address === Object.keys(balancesByPk[privateKey])[0]
+      (token) => token.address === availableInToken
     );
 
     if (!selectedInToken) {
@@ -179,86 +188,51 @@ async function main(): Promise<void> {
       continue;
     }
 
-    for (const privateKey of selectedKeys) {
-      const delay =
-        Math.random() * (customConfig.maxDelay - customConfig.minDelay) +
-        customConfig.minDelay;
+    const selectedOutToken = selectRandomArrayElements(
+      outTokens.filter((t) => t.address !== selectedInToken.address),
+      1
+    )[0];
 
-      const availableInToken = selectRandomArrayElements(
-        Object.keys(balancesByPk[privateKey]),
-        1
-      )[0];
+    const provider = new ethers.JsonRpcProvider(network.url);
 
-      const selectedInToken = inTokens.find(
-        (token) => token.address === availableInToken
-      );
+    try {
+      await provider._detectNetwork();
+    } catch (err) {
+      console.log(err);
+    }
 
-      if (!selectedInToken) {
-        console.error("selectedInToken not found");
-        continue;
-      }
+    const wallet = new ethers.Wallet(privateKey, provider);
 
-      const selectedOutToken = selectRandomArrayElements(
-        outTokens.filter((t) => t.address !== selectedInToken.address),
-        1
-      )[0];
+    if (!wallet?.provider) {
+      throw new Error("Wallet provider not found");
+    }
 
-      const provider = new ethers.JsonRpcProvider(network.url);
+    console.log(`Starting trade for address: ${wallet.address}`);
 
-      try {
-        await provider._detectNetwork();
-      } catch (err) {
-        console.log(err);
-      }
-
-      const wallet = new ethers.Wallet(privateKey, provider);
-
-      if (!wallet?.provider) {
-        throw new Error("Wallet provider not found");
-      }
-
-      console.log(`Starting trade for address: ${wallet.address}`);
-
-      try {
-        if (protocol === "mute") {
-          await muteTrade(
-            Number(percentageOfBalanceForSwap),
-            selectedInToken,
-            selectedOutToken,
-            network as (typeof networks)["zksync"],
-            wallet
-          );
-        } else if (protocol === "syncswap") {
-          await syncswapTrade(
-            Number(percentageOfBalanceForSwap),
-            selectedInToken,
-            selectedOutToken,
-            network as (typeof networks)["zksync"],
-            wallet
-          );
-        } else if (protocol === "kyberswap") {
-          await kyberswapTrade(
-            Number(percentageOfBalanceForSwap),
-            selectedInToken,
-            selectedOutToken,
-            network as (typeof networks)["zksync"],
-            wallet
-          );
-        }
-
-        if (selectedKeys.indexOf(privateKey) === selectedKeys.length - 1) {
-          break;
-        }
-
-        console.log("Delay before next trade: ", delay);
-        await new Promise((resolve) => setTimeout(resolve, delay));
-      } catch (e) {
-        console.log(
-          chalk.red(`Error in ${protocol} trade for address: `) +
-            chalk.yellow(new ethers.Wallet(privateKey).address) +
-            "\n" +
-            e +
-            "\n"
+    try {
+      if (protocol === "mute") {
+        await muteTrade(
+          Number(percentageOfBalanceForSwap),
+          selectedInToken,
+          selectedOutToken,
+          network as (typeof networks)["zksync"],
+          wallet
+        );
+      } else if (protocol === "syncswap") {
+        await syncswapTrade(
+          Number(percentageOfBalanceForSwap),
+          selectedInToken,
+          selectedOutToken,
+          network as (typeof networks)["zksync"],
+          wallet
+        );
+      } else if (protocol === "kyberswap") {
+        await kyberswapTrade(
+          Number(percentageOfBalanceForSwap),
+          selectedInToken,
+          selectedOutToken,
+          network as (typeof networks)["zksync"],
+          wallet
         );
       }
 
@@ -268,7 +242,22 @@ async function main(): Promise<void> {
 
       console.log("Delay before next trade: ", delay);
       await new Promise((resolve) => setTimeout(resolve, delay));
+    } catch (e) {
+      console.log(
+        chalk.red(`Error in ${protocol} trade for address: `) +
+          chalk.yellow(new ethers.Wallet(privateKey).address) +
+          "\n" +
+          e +
+          "\n"
+      );
     }
+
+    if (selectedKeys.indexOf(privateKey) === selectedKeys.length - 1) {
+      break;
+    }
+
+    console.log("Delay before next trade: ", delay);
+    await new Promise((resolve) => setTimeout(resolve, delay));
   }
 
   console.log(chalk.green("FINISHED!!!!!!!!!!!!"));
